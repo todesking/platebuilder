@@ -33,8 +33,14 @@ class Builder(id: String) { self =>
   def registerVar(v: Var[_ <: Type], repr: Option[String], observed: Boolean): Unit = {
     vars += (v.id -> (v.varType, v.id.str, observed))
   }
+
+  // TODO: rename to addIndex
   def setIndex(id: VarID, index: Seq[IndexID]): Unit = {
-    indices += (id -> index)
+    indices.get(id).fold {
+      indices += (id -> index)
+    } { is =>
+      indices += (id -> (index ++ is))
+    }
   }
   def setGenerator(id: VarID, g: Generator[_ <: Type]): Unit = {
     g.dependencies.foreach { d =>
@@ -135,7 +141,9 @@ object Builder {
     def R: Var[Type.Real] =
       register(new Var.Simple(id, Type.Real))
 
-    def B: Var[Type.Binary] =
+    def real: Var[Type.Real] = R
+
+    def binary: Var[Type.Binary] =
       register(new Var.Simple(id, Type.Binary))
   }
 

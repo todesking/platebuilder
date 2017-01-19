@@ -136,7 +136,53 @@ object Main {
     }
   }
 
-  val models = Seq(Unigram, MixtureOfUnigrams, LDA, PLDA)
+  val Deep = Model.define("Deep") { implicit ctx =>
+    import ctx.dsl._
+    val D = size("D")
+    val C = size("C") * D
+    val S = size("S") * (D, C)
+    val P = size("P") * (D, C, S)
+    val N = size("N") * (D, C, S, P)
+    val V = size("V")
+
+    val K = size("K")
+
+    val alpha = given("α").realVec(K)
+    val beta = given("β").realVec(V)
+
+    val phi = hidden("φ").realVec(V) * K
+    val eta = hidden("η").realVec(K) * D
+    val zeta = hidden("ζ").category(K) * K * D
+    val theta = hidden("θ").realVec(K) * (D, C)
+    val z = hidden("z").category(K) * (D, C, S, P, N)
+    val w = observed("w").category(V) * (D, C, S, P, N)
+    val y = observed("y").category(K) * (D, C, S)
+
+    for (k <- K) {
+      phi(k) ~ dirichlet(beta)
+    }
+
+    for (d <- D) {
+      eta(d) ~ dirichlet(alpha)
+      for (k <- K) {
+        zeta(d, k) ~ multinominal(eta(d))
+      }
+      for (c <- C(d)) {
+        theta(d, c) ~ dirichlet(eta(d))
+        for (s <- S(d, c)) {
+          y(d, c, s) ~ compute(z(d, c, s))
+          for (p <- P(d, c, s)) {
+            for (n <- N(d, c, s, p)) {
+              z(d, c, s, p, n) ~ multinominal(theta(d, c))
+              w(d, c, s, p, n) ~ multinominal(phi(zeta(d, z(d, c, s, p, n))))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  val models = Seq(Unigram, MixtureOfUnigrams, LDA, PLDA, Deep)
 
   def main(args: Array[String]): Unit = {
     println(Model.toDot(models))
