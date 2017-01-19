@@ -13,8 +13,14 @@ object Dot {
       }
     }
 
+  def escapeRecord(s: String): String =
+    s.replaceAll("\\|", "&#124;")
+
   def node(id: String, shape: String = "ellipse", style: String = "", label: String = ""): String =
     s"""${id}[shape=${shape} ${attr("label", escape(label))} ${attr("style", style)}];"""
+
+  def record(id: String, m: Boolean = false, style: String = "", label: Seq[String] = Seq()): String =
+    node(id, shape = if (m) "Mrecord" else "record", style = style, label = label.map(escapeRecord).mkString("|"))
 
   def edge(from: String, to: String): String =
     s"${from} -> ${to};"

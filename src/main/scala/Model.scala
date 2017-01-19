@@ -43,31 +43,30 @@ class Model(
     def renderVar(v: VarID): String =
       generator(v) match {
         case Generator.Given(desc) if !varType(v).isInstanceOf[Type.Size[_]] =>
-          Dot.node(
+          Dot.record(
             id(v),
-            shape = "record",
-            label = s"${repr(v)}${desc.fold("") { c => "|" + c }}"
+            label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Given(desc) => ""
         case Generator.Sampled(desc, deps) =>
-          Dot.node(
+          Dot.record(
             id(v),
-            shape = "Mrecord",
-            label = s"${repr(v)}${desc.fold("") { c => "|" + c }}"
+            m = true,
+            label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Observed(desc) =>
-          Dot.node(
+          Dot.record(
             id(v),
-            shape = "Mrecord",
             style = "filled",
-            label = s"${repr(v)}${desc.fold("") { c => "|" + c }}"
+            m = true,
+            label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Computed(desc, deps) =>
-          Dot.node(
+          Dot.record(
             id(v),
             style = "dotted",
-            shape = "Mrecord",
-            label = s"${repr(v)}${desc.fold("") { c => "|" + c }}"
+            m = true,
+            label = Seq(repr(v)) ++ desc.toSeq
           )
       }
     def renderEdge(from: VarID, to: VarID): String =
