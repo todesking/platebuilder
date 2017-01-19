@@ -97,10 +97,10 @@ class Model(
   }
 }
 object Model {
-  def define(id: String)(f: Ctx => Unit): Model = {
-    val ctx = new Ctx(id)
-    f(ctx)
-    ctx.build()
+  def define(id: String)(f: Builder => Unit): Model = {
+    val b = new Builder(id)
+    f(b)
+    b.build()
   }
 
   def toDot(models: Seq[Model]): String = {

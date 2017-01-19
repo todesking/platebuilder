@@ -1,8 +1,8 @@
 package com.todesking.platebuilder
 
-class Ctx(id: String) { self =>
+class Builder(id: String) { self =>
   import scala.collection.mutable
-  import Ctx.VarDef
+  import Builder.VarDef
 
   private[this] var vars: Map[VarID, (Type, String)] = Map()
   private[this] var indices: Map[VarID, Seq[IndexID]] = Map()
@@ -74,16 +74,16 @@ class Ctx(id: String) { self =>
       new Generator.Sampled(Some(s"Mult(${param.id.str})"), param.deps + param.id)
   }
 }
-object Ctx {
+object Builder {
   class Incomplete[Deps <: HList, E <: Type](val id: VarID, val varType: E) {
     import Type.{ Vec, Size, Category }
-    def *[I <: String](dim: Var[Size[I]])(implicit ctx: Ctx, ev: Deps =:= (I :: HNil)): Var[Vec[I, E]] = {
+    def *[I <: String](dim: Var[Size[I]])(implicit ctx: Builder, ev: Deps =:= (I :: HNil)): Var[Vec[I, E]] = {
       val v = new Var.Simple(id, varType)
       ctx.registerVar(v, None)
       v * dim
     }
 
-    def *[I1 <: String, I2 <: String](dim1: Var[Size[I1]], dim2: Var[Vec[I1, Size[I2]]])(implicit ctx: Ctx, ev: Deps =:= (I1 :: HNil)): Var[Vec[I1, Vec[I2, E]]] = {
+    def *[I1 <: String, I2 <: String](dim1: Var[Size[I1]], dim2: Var[Vec[I1, Size[I2]]])(implicit ctx: Builder, ev: Deps =:= (I1 :: HNil)): Var[Vec[I1, Vec[I2, E]]] = {
       val v = new Var.Simple(id, varType)
       ctx.registerVar(v, None)
       v * (dim1, dim2)
@@ -92,7 +92,7 @@ object Ctx {
 
   class VarDef[ID <: String](
       idStr: String,
-      ctx: Ctx, generator: Option[Generator[_ <: Type]],
+      ctx: Builder, generator: Option[Generator[_ <: Type]],
       repr: Option[String]
   ) {
     private[this] val id = new VarID(idStr)
