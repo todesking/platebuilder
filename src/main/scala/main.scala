@@ -39,7 +39,7 @@ class Model(
     _vars: Map[Model.VarID, (Model.Type, String)],
     indices: Map[Model.VarID, Seq[Model.IndexID]],
     _inEdges: Map[Model.VarID, Set[Model.VarID]],
-    generators: Map[Model.VarID, Model.Generator[_, _]]
+    generators: Map[Model.VarID, Model.Generator[_]]
 ) {
   import Model._
 
@@ -48,7 +48,7 @@ class Model(
   def repr(id: VarID): String = _vars(id)._2
   def index(id: VarID): Seq[IndexID] = indices.get(id) getOrElse Seq()
   def inEdges(id: VarID): Set[VarID] = _inEdges.get(id) getOrElse Set()
-  def generator(id: VarID): Generator[_, _] = generators(id)
+  def generator(id: VarID): Generator[_] = generators(id)
 
   lazy val grouped: Grouped.Root = {
     def toGrouped(i: Seq[IndexID], v: VarID): Grouped.Root =
@@ -76,7 +76,7 @@ class Model(
     def id(v: VarID): String = s"${this.id}_${v.str}"
     def renderVar(v: VarID): String =
       generator(v) match {
-        case Generator.Given(desc) if varType(v) != Type.Size =>
+        case Generator.Given(desc) if !varType(v).isInstanceOf[Type.Size[_]] =>
           Dot.node(
             id(v),
             shape = "record",
@@ -112,7 +112,7 @@ class Model(
       }
     def visibleInEdges(v: VarID): Set[VarID] =
       inEdges(v).flatMap { v2 =>
-        if (varType(v2) == Type.Size) visibleInEdges(v2)
+        if (varType(v2).isInstanceOf[Type.Size[_]]) visibleInEdges(v2)
         else Set(v2)
       }
     val content =
@@ -160,125 +160,134 @@ object Model {
   case class VarID(str: String) {
     def asIndex: IndexID = IndexID(str)
   }
-  case class IndexID(str: String)
-
-  class Indexable[ID <: String](val id: IndexID, val deps: Set[VarID])
-  object Indexable {
-    implicit def cat2indexable[ID <: String](v: Var[_, Dim.Nil, Type.Category[ID]]): Indexable[ID] =
-      new Indexable(v.id.asIndex, v.deps)
-  }
+  case class IndexID(str: String) // TODO: IndexType(Var|Constant)
 
   sealed abstract class Type
   object Type {
     type Real = Real.type
     case object Real extends Type
-    type Size = Size.type
-    case object Size extends Type
-    case class Category[A <: String](catID: VarID) extends Type
+    case class Size[A <: String]() extends Type
+    case class Category[A <: String](size: Size[A]) extends Type
+    case class Vec[I <: String, A <: Type](elm: A) extends Type {
+      def elementType: A = elm
+    }
   }
 
-  abstract class Var[ID <: String, D <: Dim, T <: Type] {
+  abstract class Var[T <: Type] {
+    import Type.{ Category, Size, Vec }
     def id: VarID
+    def varType: T
     def deps: Set[VarID]
 
-    protected def unsafeGet(i: IndexID, deps: Set[VarID]): Var[ID, D#Tail, T] =
-      new Var.Access(this.deps ++ deps + id, id)
-
-    def foreach(f: Indexable[ID] => Unit)(implicit evD: D =:= Dim.Nil, evT: T =:= Type.Size): Unit =
-      f(new Indexable(id.asIndex, deps + id))
-
-    def *[I <: String](
-      dim: Var[I, Dim.Nil, Type.Size]
-    )(implicit ctx: Ctx): Var[ID, Dim.Succ[I, D], T] = {
+    def *[I <: String](dim: Var[Type.Size[I]])(implicit ctx: Ctx): Var[Type.Vec[I, T]] = {
       ctx.setIndex(id, Seq(dim.id.asIndex))
-      new Var.Simple(id)
+      new Var.Simple(id, Vec(varType))
     }
 
     def *[I1 <: String, I2 <: String](
-      dim1: Var[I1, Dim.Nil, Type.Size],
-      dim2: Var[I2, Dim.Succ[I1, Dim.Nil], Type.Size]
-    )(implicit ctx: Ctx): Var[ID, Dim.Succ[I1, Dim.Succ[I2, D]], T] = {
-      ctx.setIndex(id, Seq(dim1, dim2).map(_.id.asIndex))
-      new Var.Simple(id)
+      d1: Var[Type.Size[I1]],
+      d2: Var[Type.Vec[I1, Type.Size[I2]]]
+    )(implicit ctx: Ctx): Var[Type.Vec[I1, Type.Vec[I2, T]]] = {
+      ctx.setIndex(id, Seq(d1.id.asIndex, d2.id.asIndex))
+      new Var.Simple(id, Vec(Vec(varType)))
     }
 
-    def ~(g: Generator[D, T])(implicit ctx: Ctx): Unit =
+    def ~(g: Generator[T])(implicit ctx: Ctx): Unit =
       ctx.setGenerator(id, g)
-
-    def apply[I <: String](i: Var[I, Dim.Nil, Type.Size])(implicit ev: D#Index =:= I): Var[ID, D#Tail, T] =
-      unsafeGet(i.id.asIndex, i.deps)
-
-    def apply[I <: String](i: Indexable[I])(implicit ev: D#Index =:= I): Var[ID, D#Tail, T] =
-      unsafeGet(i.id, i.deps)
-
-    def apply[I1 <: String, I2 <: String](i1: Indexable[I1], i2: Indexable[I2])(
-      implicit
-      ev1: D#Index =:= I1, ev2: D#Tail#Index =:= I2
-    ): Var[ID, D#Tail#Tail, T] =
-      unsafeGet(i1.id, i1.deps).unsafeGet(i2.id, i2.deps)
   }
   object Var {
-    class Simple[ID <: String, D <: Dim, T <: Type](override val id: VarID) extends Var[ID, D, T] {
+    import Type.{ Vec, Category, Size }
+
+    class Simple[T <: Type](override val id: VarID, override val varType: T) extends Var[T] {
       override def deps = Set()
     }
-    class Access[ID <: String, D <: Dim, T <: Type](override val deps: Set[VarID], override val id: VarID) extends Var[ID, D, T]
+    class Access[T <: Type](
+      override val id: VarID,
+      override val deps: Set[VarID],
+      override val varType: T
+    ) extends Var[T]
+
+    implicit class SizeVar[I <: String](self: Var[Size[I]]) {
+      def foreach(f: Var[Category[I]] => Unit): Unit = {
+        f(new Var.Simple(self.id, Category(self.varType)))
+      }
+    }
+    implicit class Vec1Ops[I <: String, E <: Type](self: Var[Vec[I, E]]) {
+      def apply(i: Var[Category[I]]): Var[E] =
+        new Var.Access(self.id, self.deps + i.id, self.varType.elementType)
+
+      def apply(i: Var[Size[I]]): Incomplete[I :: HNil, E] =
+        new Incomplete(self.id, self.varType.elementType)
+    }
+    implicit class Vec2Ops[I1 <: String, I2 <: String, E <: Type](self: Var[Vec[I1, Vec[I2, E]]]) extends Vec1Ops[I1, Vec[I2, E]](self) {
+      def apply(i1: Var[Category[I1]], i2: Var[Category[I2]]): Var[E] = self(i1)(i2)
+    }
   }
-  abstract class Generator[D <: Dim, T <: Type] {
+  sealed abstract class HList
+  class HNil extends HList
+  class ::[A, B <: HList] extends HList
+
+  class Incomplete[Deps <: HList, E <: Type](val id: VarID, val varType: E) {
+    import Type.{ Vec, Size, Category }
+    def *[I <: String](dim: Var[Size[I]])(implicit ctx: Ctx, ev: Deps =:= (I :: HNil)): Var[Vec[I, E]] = {
+      val v = new Var.Simple(id, varType)
+      ctx.registerVar(v, None)
+      v * dim
+    }
+
+    def *[I1 <: String, I2 <: String](dim1: Var[Size[I1]], dim2: Var[Vec[I1, Size[I2]]])(implicit ctx: Ctx, ev: Deps =:= (I1 :: HNil)): Var[Vec[I1, Vec[I2, E]]] = {
+      val v = new Var.Simple(id, varType)
+      ctx.registerVar(v, None)
+      v * (dim1, dim2)
+    }
+  }
+
+  abstract class Generator[T <: Type] {
     def dependencies: Set[VarID]
     def description: Option[String]
   }
   object Generator {
-    case class Given[D <: Dim, T <: Type](override val description: Option[String]) extends Generator[D, T] {
+    case class Given[T <: Type](override val description: Option[String]) extends Generator[T] {
       override def dependencies = Set()
     }
-    case class Observed[D <: Dim, T <: Type](override val description: Option[String]) extends Generator[D, T] {
+    case class Observed[T <: Type](override val description: Option[String]) extends Generator[T] {
       override def dependencies = Set()
     }
-    case class Sampled[D <: Dim, T <: Type](override val description: Option[String], override val dependencies: Set[VarID]) extends Generator[D, T]
-    case class Computed[D <: Dim, T <: Type](override val description: Option[String], override val dependencies: Set[VarID]) extends Generator[D, T]
-  }
-
-  sealed abstract class Dim {
-    type Index <: String
-    type Tail <: Dim
-    type Append[I <: String] <: Dim
-  }
-  object Dim {
-    case class Nil() extends Dim {
-      override type Append[I <: String] = Succ[I, Nil]
-    }
-    case class Succ[A <: String, B <: Dim]() extends Dim {
-      override type Index = A
-      override type Tail = B
-      override type Append[I <: String] = Succ[A, B#Append[I]]
-    }
+    case class Sampled[T <: Type](override val description: Option[String], override val dependencies: Set[VarID]) extends Generator[T]
+    case class Computed[T <: Type](override val description: Option[String], override val dependencies: Set[VarID]) extends Generator[T]
   }
 
   class VarDef[ID <: String](
       idStr: String,
-      ctx: Ctx, generator: Option[Generator[_ <: Dim, _ <: Type]],
+      ctx: Ctx, generator: Option[Generator[_ <: Type]],
       repr: Option[String]
   ) {
     private[this] val id = new VarID(idStr)
-    private[this] def register[A <: String, B <: Dim, C <: Type](v: Var[A, B, C], t: C): Var[A, B, C] = {
-      ctx.registerVar(v.id, t, repr)
+    private[this] def register[T <: Type](v: Var[T]): Var[T] = {
+      ctx.registerVar(v, repr)
       generator.foreach { g =>
         ctx.setGenerator(v.id, g)
       }
       v
     }
 
-    def size: Var[ID, Dim.Nil, Type.Size] =
-      register(new Var.Simple(id), Type.Size)
+    def size: Var[Type.Size[ID]] =
+      register(new Var.Simple(id, Type.Size()))
 
-    def vec[I <: String](dim: Var[I, Dim.Nil, Type.Size]): Var[ID, Dim.Succ[I, Dim.Nil], Type.Real] =
-      register(new Var.Simple(id), Type.Real)
+    def vec[I <: String](dim: Var[Type.Size[I]]): Var[Type.Vec[I, Type.Real]] =
+      register(new Var.Simple(id, Type.Vec(Type.Real)))
 
-    def category[I <: String, D <: Dim](size: Var[I, D, Type.Size]): Var[ID, D, Type.Category[I]] =
-      register(new Var.Simple(id), new Type.Category(size.id))
+    def vec[I <: String, II <: HList](dim: Incomplete[II, Type.Size[I]]): Incomplete[II, Type.Vec[I, Type.Real]] =
+      new Incomplete(id, Type.Vec(Type.Real))
 
-    def R: Var[ID, Dim.Nil, Type.Real] =
-      register(new Var.Simple(id), Type.Real)
+    def category[I <: String](size: Var[Type.Size[I]]): Var[Type.Category[I]] =
+      register(new Var.Simple(id, Type.Category(size.varType)))
+
+    def category[I <: String, II <: HList](size: Incomplete[II, Type.Size[I]]): Incomplete[II, Type.Category[I]] =
+      new Incomplete(id, Type.Category(size.varType))
+
+    def R: Var[Type.Real] =
+      register(new Var.Simple(id, Type.Real))
   }
 
   class Ctx(id: String) { self =>
@@ -288,23 +297,35 @@ object Model {
     private[this] var indices: Map[VarID, Seq[IndexID]] = Map()
     private[this] val inEdges: mutable.MultiMap[VarID, VarID] =
       new mutable.HashMap[VarID, mutable.Set[VarID]] with mutable.MultiMap[VarID, VarID]
-    private[this] var generators: Map[VarID, Generator[_, _]] = Map()
+    private[this] var generators: Map[VarID, Generator[_]] = Map()
 
-    def build(): Model = new Model(
-      id,
-      vars,
-      indices,
-      inEdges.toMap.mapValues(_.toSet),
-      generators
-    )
+    def build(): Model = {
+      val missingGenerators = vars.keys.filterNot { id => generators.contains(id) }
+      if (missingGenerators.nonEmpty) {
+        throw new IllegalStateException(s"Generator undefined: ${missingGenerators.map(_.str).mkString(", ")}")
+      }
+      val undefinedVars = (
+        indices.keySet ++ indices.values.flatten.map(id => VarID(id.str)).toSet ++ inEdges.keySet ++ inEdges.values.flatten.toSet ++ generators.keySet
+      ).filterNot { id => vars.contains(id) }
+      if (undefinedVars.nonEmpty) {
+        throw new IllegalStateException(s"Unknown variables: ${undefinedVars.map(_.str).mkString(", ")}")
+      }
+      new Model(
+        id,
+        vars,
+        indices,
+        inEdges.toMap.mapValues(_.toSet),
+        generators
+      )
+    }
 
-    def registerVar(id: VarID, varType: Type, repr: Option[String]): Unit = {
-      vars += (id -> (varType -> repr.getOrElse(id.str)))
+    def registerVar(v: Var[_ <: Type], repr: Option[String]): Unit = {
+      vars += (v.id -> (v.varType -> v.id.str))
     }
     def setIndex(id: VarID, index: Seq[IndexID]): Unit = {
       indices += (id -> index)
     }
-    def setGenerator(id: VarID, g: Generator[_ <: Dim, _ <: Type]): Unit = {
+    def setGenerator(id: VarID, g: Generator[_ <: Type]): Unit = {
       g.dependencies.foreach { d =>
         inEdges.addBinding(id, d)
       }
@@ -314,13 +335,13 @@ object Model {
     object dsl {
       private[this] def opt(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
-      def size(id: String, repr: String = ""): Var[id.type, Dim.Nil, Type.Size] =
+      def size(id: String, repr: String = ""): Var[Type.Size[id.type]] =
         given(id, repr).size
 
-      def compute[D <: Dim, T <: Type](dependencies: Var[_, _, _]*): Generator.Computed[D, T] =
+      def compute[T <: Type](dependencies: Var[_]*): Generator.Computed[T] =
         new Generator.Computed(None, dependencies.map(_.id).toSet ++ dependencies.flatMap(_.deps))
 
-      def compute[D <: Dim, T <: Type](desc: String, dependencies: Var[_, _, _]*): Generator.Computed[D, T] =
+      def compute[T <: Type](desc: String, dependencies: Var[_]*): Generator.Computed[T] =
         new Generator.Computed(Some(desc), dependencies.map(_.id).toSet ++ dependencies.flatMap(_.deps))
 
       def given(id: String, repr: String = ""): VarDef[id.type] =
@@ -335,10 +356,10 @@ object Model {
       def computed(id: String, repr: String = ""): VarDef[id.type] =
         new VarDef[id.type](id, self, None, opt(repr))
 
-      def dirichlet[I <: String](param: Var[_, Dim.Succ[I, Dim.Nil], Type.Real]): Generator.Sampled[Dim.Succ[I, Dim.Nil], Type.Real] =
+      def dirichlet[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Sampled[Type.Vec[I, Type.Real]] =
         new Generator.Sampled(Some(s"Dirichlet(${param.id.str})"), param.deps + param.id)
 
-      def multinominal[I <: String](param: Var[_, Dim.Succ[I, Dim.Nil], Type.Real]): Generator.Sampled[Dim.Nil, Type.Category[I]] =
+      def multinominal[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Sampled[Type.Category[I]] =
         new Generator.Sampled(Some(s"Mult(${param.id.str})"), param.deps + param.id)
     }
   }
