@@ -55,17 +55,20 @@ class Model(
       base + dim
     }
     def id(v: VarID): String = s"${this.id}_${v.str}"
+    val transpose = true
     def renderVar(v: VarID): String =
       generator(v) match {
         case Generator.Given(desc) if !varType(v).isInstanceOf[Type.Size[_]] =>
           Dot.record(
             id(v),
+            transpose = transpose,
             label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Given(desc) => ""
         case Generator.Sampled(desc, deps) =>
           Dot.record(
             id(v),
+            transpose = transpose,
             m = true,
             label = Seq(repr(v)) ++ desc.toSeq
           )
@@ -73,12 +76,14 @@ class Model(
           Dot.record(
             id(v),
             style = "filled",
+            transpose = transpose,
             m = true,
             label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Computed(desc, deps) =>
           Dot.record(
             id(v),
+            transpose = transpose,
             style = "dotted",
             m = true,
             label = Seq(repr(v)) ++ desc.toSeq
@@ -87,7 +92,7 @@ class Model(
     def renderEdge(from: VarID, to: VarID): String =
       Dot.edge(id(from), id(to))
     def renderChild(c: Grouped.Child): String =
-      Dot.subGraph(s"cluster_${c.index.str}", label = c.index.str) {
+      Dot.subGraph(s"cluster_${c.index.str}", label = c.index.str, labeljust = "r", labelloc = "b") {
         (c.vars.map(renderVar) ++ c.children.map(renderChild)).mkString("\n")
       }
     def visibleInEdges(v: VarID): Set[VarID] =
