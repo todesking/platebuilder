@@ -7,7 +7,10 @@ object Dot {
   def escape(s: String): String =
     s.flatMap { c =>
       if (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.BASIC_LATIN) {
-        c.toString
+        c match {
+          case '{' | '}' => s"&#${c.toInt};"
+          case _ => c.toString
+        }
       } else {
         s"&#${c.toInt};"
       }

@@ -39,6 +39,21 @@ class Model(
   }
 
   def toDot(subgraph: Boolean = false): String = {
+    def repr(v: VarID): String = s"${this.repr(v)} ∈ ${tpe(v)}"
+    def tpe(v: VarID): String = {
+      val t = varType(v)
+      val base =
+        t.bareType match {
+          case Type.Real => "R"
+          case Type.Binary => "{0, 1}"
+          case Type.Category(s) => s"{1..${s.indexID.str}}"
+          case Type.Size(id) => "N"
+        }
+      val dim =
+        if (t.dimension.nonEmpty) s" ^ ${t.dimension.map(_.str).mkString("×")}"
+        else ""
+      base + dim
+    }
     def id(v: VarID): String = s"${this.id}_${v.str}"
     def renderVar(v: VarID): String =
       generator(v) match {

@@ -8,7 +8,7 @@ abstract class Var[T <: Type] {
 
   def *[I <: String](dim: Var[Type.Size[I]])(implicit b: Builder): Var[Type.Vec[I, T]] = {
     b.setIndex(id, Seq(dim.id.asIndex))
-    new Var.Simple(id, Vec(varType))
+    new Var.Simple(id, Vec(dim.id.asIndex, varType))
   }
 
   def *[I1 <: String, I2 <: String](
@@ -16,7 +16,7 @@ abstract class Var[T <: Type] {
     d2: Var[Type.Vec[I1, Type.Size[I2]]]
   )(implicit b: Builder): Var[Type.Vec[I1, Type.Vec[I2, T]]] = {
     b.setIndex(id, Seq(d1.id.asIndex, d2.id.asIndex))
-    new Var.Simple(id, Vec(Vec(varType)))
+    new Var.Simple(id, Vec(d1.id.asIndex, Vec(d2.id.asIndex, varType)))
   }
 
   def ~(g: Generator[T])(implicit b: Builder): Unit =

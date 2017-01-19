@@ -11,10 +11,10 @@ object Main {
     val N = size("N") * D // N(d): num of words in document d
 
     // hyperparameters
-    val beta = given("β").vec(V)
+    val beta = given("β").realVec(V)
 
     // variables
-    val phi = hidden("φ").vec(V)
+    val phi = hidden("φ").realVec(V)
     val w = observed("w").category(V) * (D, N)
 
     phi ~ dirichlet(beta)
@@ -34,12 +34,12 @@ object Main {
     val N = size("N") * D // N(d): num of words in document d
 
     // hyperparameters
-    val alpha = given("α").vec(K)
-    val beta = given("β").vec(V)
+    val alpha = given("α").realVec(K)
+    val beta = given("β").realVec(V)
 
     // variables
-    val phi = hidden("φ").vec(V) * K
-    val theta = hidden("θ").vec(K)
+    val phi = hidden("φ").realVec(V) * K
+    val theta = hidden("θ").realVec(K)
     val z = hidden("z").category(K) * D
     val w = observed("w").category(V) * (D, N)
 
@@ -65,12 +65,12 @@ object Main {
     val N = size("N") * D // N(d): num of words in document d
 
     // hyperparameters
-    val alpha = given("α").vec(K)
-    val beta = given("β").vec(V)
+    val alpha = given("α").realVec(K)
+    val beta = given("β").realVec(V)
 
     // variables
-    val phi = hidden("φ").vec(V) * K
-    val theta = hidden("θ").vec(K) * D
+    val phi = hidden("φ").realVec(V) * K
+    val theta = hidden("θ").realVec(K) * D
     val z = hidden("z").category(K) * (D, N)
     val w = observed("w").category(V) * (D, N)
 
@@ -100,16 +100,16 @@ object Main {
 
     // hyperparameters
     val alpha = given("α").R
-    val beta = given("β").vec(V)
+    val beta = given("β").realVec(V)
 
-    val alphaL = computed("α_L").vec(Kd(D)) * D
-    val alphaT = computed("α_T").vec(K) * D
+    val alphaL = computed("α_L").realVec(Kd(D)) * D
+    val alphaT = computed("α_T").realVec(K) * D
 
     // variables
-    val phi = hidden("φ").vec(V) * K
-    val theta = hidden("θ").vec(K) * (D, Kd) // theta(d, l): topic distribution of document d and label l
-    val Lambda = observed("Λ").vec(L) * D // Set of labels in document d as L-dimensional binary vector
-    val psi = hidden("ψ").vec(Kd(D)) * D
+    val phi = hidden("φ").realVec(V) * K
+    val theta = hidden("θ").realVec(K) * (D, Kd) // theta(d, l): topic distribution of document d and label l
+    val Lambda = observed("Λ").binaryVec(L) * D // Set of labels in document d as L-dimensional binary vector
+    val psi = hidden("ψ").realVec(Kd(D)) * D
     val z = hidden("z").category(K) * (D, N)
     val w = observed("w").category(V) * (D, N)
     val l = observed("l").category(Kd(D)) * (D, N)

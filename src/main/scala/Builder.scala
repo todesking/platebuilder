@@ -105,13 +105,25 @@ object Builder {
     }
 
     def size: Var[Type.Size[ID]] =
-      register(new Var.Simple(id, Type.Size()))
+      register(new Var.Simple(id, Type.Size(id.asIndex)))
 
-    def vec[I <: String](dim: Var[Type.Size[I]]): Var[Type.Vec[I, Type.Real]] =
-      register(new Var.Simple(id, Type.Vec(Type.Real)))
+    def vec[I <: String, T <: Type](dim: Var[Type.Size[I]], tpe: T): Var[Type.Vec[I, T]] =
+      register(new Var.Simple(id, Type.Vec(dim.id.asIndex, tpe)))
 
-    def vec[I <: String, II <: HList](dim: Incomplete[II, Type.Size[I]]): Incomplete[II, Type.Vec[I, Type.Real]] =
-      new Incomplete(id, Type.Vec(Type.Real))
+    def vec[I <: String, II <: HList, T <: Type](dim: Incomplete[II, Type.Size[I]], tpe: T): Incomplete[II, Type.Vec[I, T]] =
+      new Incomplete(id, Type.Vec(dim.id.asIndex, tpe))
+
+    def realVec[I <: String, T <: Type](dim: Var[Type.Size[I]]): Var[Type.Vec[I, Type.Real]] =
+      vec(dim, Type.Real)
+
+    def realVec[I <: String, II <: HList, T <: Type](dim: Incomplete[II, Type.Size[I]]): Incomplete[II, Type.Vec[I, Type.Real]] =
+      vec(dim, Type.Real)
+
+    def binaryVec[I <: String, T <: Type](dim: Var[Type.Size[I]]): Var[Type.Vec[I, Type.Binary]] =
+      vec(dim, Type.Binary)
+
+    def binaryVec[I <: String, II <: HList, T <: Type](dim: Incomplete[II, Type.Size[I]]): Incomplete[II, Type.Vec[I, Type.Binary]] =
+      vec(dim, Type.Binary)
 
     def category[I <: String](size: Var[Type.Size[I]]): Var[Type.Category[I]] =
       register(new Var.Simple(id, Type.Category(size.varType)))
@@ -121,6 +133,9 @@ object Builder {
 
     def R: Var[Type.Real] =
       register(new Var.Simple(id, Type.Real))
+
+    def B: Var[Type.Binary] =
+      register(new Var.Simple(id, Type.Binary))
   }
 
 }
