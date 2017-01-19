@@ -44,7 +44,7 @@ object Var {
       new Var.Access(self.id, self.deps + i.id, self.varType.elementType)
 
     def apply(i: Var[Size[I]]): Builder.Incomplete[I :: HNil, E] =
-      new Builder.Incomplete(self.id, self.varType.elementType)
+      new Builder.Incomplete(self.id, self.varType.elementType, false) // TODO: Use another class
   }
   implicit class Vec2Ops[I1 <: String, I2 <: String, E <: Type](self: Var[Vec[I1, Vec[I2, E]]]) extends Vec1Ops[I1, Vec[I2, E]](self) {
     def apply(i1: Var[Category[I1]], i2: Var[Category[I2]]): Var[E] = self(i1)(i2)

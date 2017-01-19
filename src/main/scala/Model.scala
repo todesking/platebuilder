@@ -2,7 +2,7 @@ package com.todesking.platebuilder
 
 class Model(
     id: String,
-    _vars: Map[VarID, (Type, String)],
+    _vars: Map[VarID, (Type, String, Boolean)],
     indices: Map[VarID, Seq[IndexID]],
     _inEdges: Map[VarID, Set[VarID]],
     generators: Map[VarID, Generator[_]]
@@ -12,6 +12,7 @@ class Model(
   def vars: Set[VarID] = _vars.keySet
   def varType(id: VarID): Type = _vars(id)._1
   def repr(id: VarID): String = _vars(id)._2
+  def observed(id: VarID): Boolean = _vars(id)._3
   def index(id: VarID): Seq[IndexID] = indices.get(id) getOrElse Seq()
   def inEdges(id: VarID): Set[VarID] = _inEdges.get(id) getOrElse Set()
   def generator(id: VarID): Generator[_] = generators(id)
@@ -56,12 +57,13 @@ class Model(
     }
     def id(v: VarID): String = s"${this.id}_${v.str}"
     val transpose = true
-    def renderVar(v: VarID): String =
+    def renderVar(v: VarID): String = {
       generator(v) match {
         case Generator.Given(desc) if !varType(v).isInstanceOf[Type.Size[_]] =>
           Dot.record(
             id(v),
             transpose = transpose,
+            style = if (observed(v)) "filled" else "",
             label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Given(desc) => ""
@@ -69,14 +71,7 @@ class Model(
           Dot.record(
             id(v),
             transpose = transpose,
-            m = true,
-            label = Seq(repr(v)) ++ desc.toSeq
-          )
-        case Generator.Observed(desc) =>
-          Dot.record(
-            id(v),
-            style = "filled",
-            transpose = transpose,
+            style = if (observed(v)) "filled" else "",
             m = true,
             label = Seq(repr(v)) ++ desc.toSeq
           )
@@ -84,11 +79,12 @@ class Model(
           Dot.record(
             id(v),
             transpose = transpose,
-            style = "dotted",
+            style = if (observed(v)) "filled,dotted" else "dotted",
             m = true,
             label = Seq(repr(v)) ++ desc.toSeq
           )
       }
+    }
     def renderEdge(from: VarID, to: VarID): String =
       Dot.edge(id(from), id(to))
     def renderChild(c: Grouped.Child): String =

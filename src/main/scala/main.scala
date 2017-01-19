@@ -112,7 +112,7 @@ object Main {
     val psi = hidden("ψ").realVec(Kd(D)) * D
     val z = hidden("z").category(K) * (D, N)
     val w = observed("w").category(V) * (D, N)
-    val l = observed("l").category(Kd(D)) * (D, N)
+    val l = hidden("l").category(Kd(D)) * (D, N)
 
     for (k <- K) {
       phi(k) ~ dirichlet(beta)
