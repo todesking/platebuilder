@@ -123,7 +123,7 @@ class Model(
     if (subgraph) {
       Dot.subGraph(s"cluster_${this.id}", label = this.id)(content)
     } else {
-      Dot.digraph(this.id)("""rankdir=TB;charset="UTF-8";"""" + content)
+      Dot.digraph(this.id)("""rankdir="TB";charset="UTF-8";""" + content)
     }
   }
 }
