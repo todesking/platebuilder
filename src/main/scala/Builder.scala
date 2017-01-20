@@ -5,10 +5,12 @@ class Builder(id: String) { self =>
   import Builder.VarDef
 
   private[this] var vars: Map[VarID, (Type, String, Boolean)] = Map()
+  private[this] var varOrder: Seq[VarID] = Seq()
   private[this] var indices: Map[VarID, Seq[IndexID]] = Map()
   private[this] val inEdges: mutable.MultiMap[VarID, VarID] =
     new mutable.HashMap[VarID, mutable.Set[VarID]] with mutable.MultiMap[VarID, VarID]
   private[this] var generators: Map[VarID, Generator[_]] = Map()
+  private[this] var descs: Map[VarID, String] = Map()
 
   def build(): Model = {
     val missingGenerators = vars.keys.filterNot { id => generators.contains(id) }
@@ -16,22 +18,30 @@ class Builder(id: String) { self =>
       throw new IllegalStateException(s"Generator undefined: ${missingGenerators.map(_.str).mkString(", ")}")
     }
     val undefinedVars = (
-      indices.keySet ++ indices.values.flatten.map(id => VarID(id.str)).toSet ++ inEdges.keySet ++ inEdges.values.flatten.toSet ++ generators.keySet
+      indices.keySet ++ indices.values.flatten.map(id => VarID(id.str)).toSet ++ inEdges.keySet ++ inEdges.values.flatten.toSet ++ generators.keySet ++ descs.keySet
     ).filterNot { id => vars.contains(id) }
     if (undefinedVars.nonEmpty) {
       throw new IllegalStateException(s"Unknown variables: ${undefinedVars.map(_.str).mkString(", ")}")
     }
     new Model(
       id,
+      varOrder,
       vars,
       indices,
       inEdges.toMap.mapValues(_.toSet),
-      generators
+      generators,
+      descs.toMap
     )
   }
 
-  def registerVar(v: Var[_ <: Type], repr: Option[String], observed: Boolean): Unit = {
+  def registerVar(v: Var[_ <: Type], desc: Option[String], observed: Boolean): Unit = {
+    if (!vars.contains(v.id)) {
+      varOrder :+= v.id
+    }
     vars += (v.id -> (v.varType, v.id.str, observed))
+    desc.foreach { d =>
+      descs += (v.id -> d)
+    }
   }
 
   // TODO: rename to addIndex
@@ -52,8 +62,8 @@ class Builder(id: String) { self =>
   object dsl {
     private[this] def opt(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
-    def size(id: String, repr: String = ""): Var[Type.Size[id.type]] =
-      given(id, repr).size
+    def size(id: String, desc: String = ""): Var[Type.Size[id.type]] =
+      given(id, desc).size
 
     def compute[T <: Type](dependencies: Var[_]*): Generator.Computed[T] =
       new Generator.Computed(None, dependencies.map(_.id).toSet ++ dependencies.flatMap(_.deps))
@@ -61,17 +71,17 @@ class Builder(id: String) { self =>
     def compute[T <: Type](desc: String, dependencies: Var[_]*): Generator.Computed[T] =
       new Generator.Computed(Some(desc), dependencies.map(_.id).toSet ++ dependencies.flatMap(_.deps))
 
-    def given(id: String, repr: String = ""): VarDef[id.type] =
-      new VarDef[id.type](id, self, Some(new Generator.Given(None)), opt(repr))
+    def given(id: String, desc: String = ""): VarDef[id.type] =
+      new VarDef[id.type](id, self, Some(new Generator.Given(None)), opt(desc))
 
-    def observed(id: String, repr: String = ""): VarDef[id.type] =
-      new VarDef[id.type](id, self, Some(Generator.Given(None)), opt(repr), true)
+    def observed(id: String, desc: String = ""): VarDef[id.type] =
+      new VarDef[id.type](id, self, Some(Generator.Given(None)), opt(desc), true)
 
-    def hidden(id: String, repr: String = ""): VarDef[id.type] =
-      new VarDef[id.type](id, self, Some(new Generator.Given(None)), opt(repr))
+    def hidden(id: String, desc: String = ""): VarDef[id.type] =
+      new VarDef[id.type](id, self, Some(new Generator.Given(None)), opt(desc))
 
-    def computed(id: String, repr: String = ""): VarDef[id.type] =
-      new VarDef[id.type](id, self, None, opt(repr))
+    def computed(id: String, desc: String = ""): VarDef[id.type] =
+      new VarDef[id.type](id, self, None, opt(desc))
 
     def dirichlet[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Sampled[Type.Vec[I, Type.Real]] =
       new Generator.Sampled(Some(s"Dirichlet(${param.id.str})"), param.deps + param.id)
@@ -99,12 +109,12 @@ object Builder {
   class VarDef[ID <: String](
       idStr: String,
       ctx: Builder, generator: Option[Generator[_ <: Type]],
-      repr: Option[String],
+      desc: Option[String],
       observed: Boolean = false
   ) {
     private[this] val id = new VarID(idStr)
     private[this] def register[T <: Type](v: Var[T]): Var[T] = {
-      ctx.registerVar(v, repr, observed)
+      ctx.registerVar(v, desc, observed)
       generator.foreach { g =>
         ctx.setGenerator(v.id, g)
       }

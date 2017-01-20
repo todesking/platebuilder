@@ -2,14 +2,16 @@ package com.todesking.platebuilder
 
 class Model(
     id: String,
+    varOrder: Seq[VarID],
     _vars: Map[VarID, (Type, String, Boolean)],
     indices: Map[VarID, Seq[IndexID]],
     _inEdges: Map[VarID, Set[VarID]],
-    generators: Map[VarID, Generator[_]]
+    generators: Map[VarID, Generator[_]],
+    descriptions: Map[VarID, String]
 ) {
   import Model._
 
-  def vars: Set[VarID] = _vars.keySet
+  def vars: Seq[VarID] = varOrder
   def varType(id: VarID): Type = _vars(id)._1
   def repr(id: VarID): String = _vars(id)._2
   def observed(id: VarID): Boolean = _vars(id)._3
@@ -96,13 +98,27 @@ class Model(
         if (varType(v2).isInstanceOf[Type.Size[_]]) visibleInEdges(v2)
         else Set(v2)
       }
+    val descs =
+      vars.flatMap { v =>
+        descriptions.get(v).map { d =>
+          s"${v.str}: ${d}"
+        }
+      }
+    val descNode =
+      if (descs.isEmpty) Seq()
+      else Seq(Dot.node(
+        id = s"${this.id}_NOTE",
+        shape = "note",
+        label = descs.mkString("", "\\l", "\\l")
+      ))
     val content =
       Seq(
         grouped.vars.map(renderVar),
         grouped.children.map(renderChild),
         vars.flatMap { v =>
           visibleInEdges(v).map { v2 => renderEdge(v2, v) }
-        }
+        },
+        descNode
       ).flatten.mkString("\n")
     if (subgraph) {
       Dot.subGraph(s"cluster_${this.id}", label = this.id)(content)

@@ -6,9 +6,9 @@ import scala.language.higherKinds
 object Main {
   val Unigram = Model.define("Unigram") { implicit ctx =>
     import ctx.dsl._
-    val V = size("V") // num of vocabularies
-    val D = size("D") // num of documens
-    val N = size("N") * D // N(d): num of words in document d
+    val V = size("V", "Number of vocabularies")
+    val D = size("D", "Number of documents")
+    val N = size("N", "Number of words for each documents") * D
 
     // hyperparameters
     val beta = given("β").realVec(V)
@@ -28,10 +28,10 @@ object Main {
 
   val MixtureOfUnigrams = Model.define("MixtureOfUnigrams") { implicit ctx =>
     import ctx.dsl._
-    val K = size("K") // num of topics
-    val V = size("V") // num of vocabularies
-    val D = size("D") // num of documens
-    val N = size("N") * D // N(d): num of words in document d
+    val K = size("K", "Number of topics")
+    val V = size("V", "Number of vocabularies")
+    val D = size("D", "Number of documents")
+    val N = size("N", "Number of words for each documents") * D
 
     // hyperparameters
     val alpha = given("α").realVec(K)
@@ -40,7 +40,7 @@ object Main {
     // variables
     val phi = hidden("φ").realVec(V) * K
     val theta = hidden("θ").realVec(K)
-    val z = hidden("z").category(K) * D
+    val z = hidden("z", "Hidden topic for each document").category(K) * D
     val w = observed("w").category(V) * (D, N)
 
     for (k <- K) {
@@ -59,10 +59,10 @@ object Main {
 
   val LDA = Model.define("LDA") { implicit ctx =>
     import ctx.dsl._
-    val K = size("K") // num of topics
-    val V = size("V") // num of vocabularies
-    val D = size("D") // num of documens
-    val N = size("N") * D // N(d): num of words in document d
+    val K = size("K", "Number of topics")
+    val V = size("V", "Number of vocabularies")
+    val D = size("D", "Number of documents")
+    val N = size("N", "Number of words for each documents") * D
 
     // hyperparameters
     val alpha = given("α").realVec(K)
@@ -71,7 +71,7 @@ object Main {
     // variables
     val phi = hidden("φ").realVec(V) * K
     val theta = hidden("θ").realVec(K) * D
-    val z = hidden("z").category(K) * (D, N)
+    val z = hidden("z", "Hidden topic for each word").category(K) * (D, N)
     val w = observed("w").category(V) * (D, N)
 
     for (k <- K) {
