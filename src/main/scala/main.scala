@@ -157,6 +157,7 @@ object Main {
     val z = hidden("z").category(K) * (D, C, S, P, N)
     val w = observed("w").category(V) * (D, C, S, P, N)
     val y = observed("y").category(K) * (D, C, S)
+    val a = observed("a").R * (D, C)
 
     for (k <- K) {
       phi(k) ~ dirichlet(beta)
@@ -178,6 +179,7 @@ object Main {
             }
           }
         }
+        a(d, c) ~ compute(w(d, c))
       }
     }
   }
