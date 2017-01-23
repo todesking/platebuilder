@@ -62,14 +62,35 @@ class Builder(id: String) { self =>
   object dsl {
     private[this] def opt(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
+    implicit class ComputationString(sc: StringContext) {
+      private[this] def computationStr(args: Seq[Any]): String = {
+        require(args.size == sc.parts.size - 1)
+        def render(a: Any): String = a match {
+          case Var.Simple(id, t) =>
+            id.str
+          case Var.Access(vec, i) =>
+            vec.id.str
+        }
+        var s = sc.parts(0)
+        for (i <- 1 until sc.parts.size) {
+          s += render(args(i - 1))
+          s += sc.parts(i)
+        }
+        s
+      }
+      private[this] def filterVars(args: Seq[Any]): Seq[Var[_]] =
+        args.collect { case v: Var[_] => v }
+      private[this] def deps(v: Var[_]): Set[VarID] =
+        v.deps + v.id
+
+      def stochastic[A <: Type](args: Any*): Generator.Stochastic[A] =
+        new Generator.Stochastic(Some(computationStr(args)), filterVars(args).flatMap(deps).toSet)
+      def deterministic[A <: Type](args: Any*): Generator.Deterministic[A] =
+        new Generator.Deterministic(Some(computationStr(args)), filterVars(args).flatMap(deps).toSet)
+    }
+
     def size(id: String, desc: String = ""): Var[Type.Size[id.type]] =
       given(id, desc).size
-
-    def compute[T <: Type](dependencies: Var[_]*): Generator.Computed[T] =
-      new Generator.Computed(None, dependencies.map(_.id).toSet ++ dependencies.flatMap(_.deps))
-
-    def compute[T <: Type](desc: String, dependencies: Var[_]*): Generator.Computed[T] =
-      new Generator.Computed(Some(desc), dependencies.map(_.id).toSet ++ dependencies.flatMap(_.deps))
 
     def given(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(new Generator.Given(None)), opt(desc))
@@ -83,14 +104,20 @@ class Builder(id: String) { self =>
     def computed(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, None, opt(desc))
 
-    def dirichlet[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Sampled[Type.Vec[I, Type.Real]] =
-      new Generator.Sampled(Some(s"Dirichlet(${param.id.str})"), param.deps + param.id)
+    def dirichlet[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Stochastic[Type.Vec[I, Type.Real]] =
+      stochastic"Dirichlet($param)"
 
-    def multinominal[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Sampled[Type.Category[I]] =
-      new Generator.Sampled(Some(s"Mult(${param.id.str})"), param.deps + param.id)
+    def multinominal[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Stochastic[Type.Category[I]] =
+      stochastic"Mult($param)"
+
+    def mapping[A <: String, B <: String](a: Var[Type.Size[A]], b: Var[Type.Size[B]]): Builder.Mapping[A, B] =
+      new Builder.Mapping(a.varType, b.varType)
   }
 }
 object Builder {
+  class Mapping[A <: String, B <: String](t1: Type.Size[A], t2: Type.Size[B]) extends Function1[Var[Type.Category[A]], Var[Type.Category[B]]] {
+    override def apply(a: Var[Type.Category[A]]): Var[Type.Category[B]] = new Var.Simple(a.id, new Type.Category(t2))
+  }
   class Incomplete[Deps <: HList, E <: Type](val id: VarID, val varType: E, val observed: Boolean) {
     import Type.{ Vec, Size, Category }
     def *[I <: String](dim: Var[Size[I]])(implicit ctx: Builder, ev: Deps =:= (I :: HNil)): Var[Vec[I, E]] = {

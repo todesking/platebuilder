@@ -69,7 +69,7 @@ class Model(
             label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Given(desc) => ""
-        case Generator.Sampled(desc, deps) =>
+        case Generator.Stochastic(desc, deps) =>
           Dot.record(
             id(v),
             transpose = transpose,
@@ -77,7 +77,7 @@ class Model(
             m = true,
             label = Seq(repr(v)) ++ desc.toSeq
           )
-        case Generator.Computed(desc, deps) =>
+        case Generator.Deterministic(desc, deps) =>
           Dot.record(
             id(v),
             transpose = transpose,

@@ -55,14 +55,17 @@ abstract class Var[T <: Type] {
 object Var {
   import Type.{ Vec, Category, Size }
 
-  class Simple[T <: Type](override val id: VarID, override val varType: T) extends Var[T] {
+  case class Simple[T <: Type](override val id: VarID, override val varType: T) extends Var[T] {
     override def deps = Set()
   }
-  class Access[T <: Type](
-    override val id: VarID,
-    override val deps: Set[VarID],
-    override val varType: T
-  ) extends Var[T]
+  case class Access[T <: Type, I <: String](
+      vec: Var[Vec[I, T]],
+      index: Var[Category[I]]
+  ) extends Var[T] {
+    override def id: VarID = vec.id
+    override def varType: T = vec.varType.elementType
+    override def deps: Set[VarID] = vec.deps ++ index.deps + index.id
+  }
 
   implicit class SizeVar[I <: String](self: Var[Size[I]]) {
     def foreach(f: Var[Category[I]] => Unit): Unit = {
@@ -71,7 +74,7 @@ object Var {
   }
   implicit class Vec1Ops[I <: String, E <: Type](self: Var[Vec[I, E]]) {
     def apply(i: Var[Category[I]]): Var[E] =
-      new Var.Access(self.id, self.deps ++ i.deps + i.id, self.varType.elementType)
+      Var.Access(self, i)
 
     def apply(i: Var[Size[I]]): Builder.Incomplete[I :: HNil, E] =
       new Builder.Incomplete(self.id, self.varType.elementType, false) // TODO: Use another class

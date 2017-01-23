@@ -103,7 +103,7 @@ object Main {
     val beta = given("β").realVec(V)
 
     val alphaL = computed("α_L").realVec(Kd(D)) * D
-    val alphaT = computed("α_T").realVec(K) * D
+    val alphaT = computed("α_T").realVec(K) * L * D
 
     // variables
     val phi = hidden("φ").realVec(V) * K
@@ -119,13 +119,15 @@ object Main {
     }
 
     for (d <- D) {
-      Kd(d) ~ compute("|Λ_d|", Lambda(d))
-      alphaT(d) ~ compute(alpha, Lambda(d))
-      for (j <- Kd(d)) {
-        theta(d, j) ~ dirichlet(alphaT(d))
+      Kd(d) ~ deterministic"|${Lambda(d)}|"
+      implicit val kd2l = mapping(Kd(d), L)
+
+      for (l <- Kd(d)) {
+        alphaL(d, l) ~ deterministic"$alpha * ${K_L(kd2l(l))} * ${Lambda(d, kd2l(l))}"
+        alphaT(d, kd2l(l)) ~ deterministic"$alpha * ${K_L(kd2l(l))}"
+        theta(d, l) ~ dirichlet(alphaT(d, l))
       }
 
-      alphaL(d) ~ compute(alpha, Lambda(d), K_L) // alphaL(d, j) = if j in lambda(d) then alpha * Kl(j) else 0
       psi(d) ~ dirichlet(alphaL(d))
 
       for (n <- N(d)) {
@@ -171,7 +173,7 @@ object Main {
       for (c <- C(d)) {
         theta(d, c) ~ dirichlet(eta(d))
         for (s <- S(d, c)) {
-          y(d, c, s) ~ compute(z(d, c, s))
+          y(d, c, s) ~ deterministic"f(${z(d, c, s)})"
           for (p <- P(d, c, s)) {
             for (n <- N(d, c, s, p)) {
               z(d, c, s, p, n) ~ multinominal(theta(d, c))
@@ -179,7 +181,7 @@ object Main {
             }
           }
         }
-        a(d, c) ~ compute(w(d, c))
+        a(d, c) ~ stochastic"SomeDist(${w(d, c)})"
       }
     }
   }
