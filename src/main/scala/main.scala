@@ -89,26 +89,25 @@ object Main {
 
   val PLDA = Model.define("PLDA") { implicit ctx =>
     import ctx.dsl._
-    val K = size("K") // num of topics
-    val V = size("V") // num of vocabularies
-    val D = size("D") // num of documens
-    val N = size("N") * D // N(d): num of words in document d
-    val L = size("L") // num of labels
-    val K_L = size("K_L") * L // K_L(l): num of topics assigned to label l
-
-    val Kd = computed("Kd").size * D // num of labels assigned to document d(=|Lambda(d)|)
+    val K = size("K", "Num of topics")
+    val V = size("V", "Num of vocabularies")
+    val D = size("D", "Num of documents")
+    val N = size("N", "Num of words for each document") * D
+    val L = size("L", "Num of labels")
+    val Kd = computed("Kd", "Num of labels assigned for each document").size * D
+    val K_L = size("K_L", "Num of topics assigned for each document and label") * (D, Kd)
 
     // hyperparameters
     val alpha = given("α").R
     val beta = given("β").realVec(V)
 
     val alphaL = computed("α_L").realVec(Kd(D)) * D
-    val alphaT = computed("α_T").realVec(K) * L * D
+    val alphaT = computed("α_T").realVec(K) * (D, Kd)
 
     // variables
     val phi = hidden("φ").realVec(V) * K
-    val theta = hidden("θ").realVec(K) * (D, Kd) // theta(d, l): topic distribution of document d and label l
-    val Lambda = observed("Λ").binaryVec(L) * D // Set of labels in document d as L-dimensional binary vector
+    val theta = hidden("θ", "Topic distribution").realVec(K) * (D, Kd)
+    val Lambda = observed("Λ", "Assigned labels").binaryVec(L) * D
     val psi = hidden("ψ").realVec(Kd(D)) * D
     val z = hidden("z").category(K) * (D, N)
     val w = observed("w").category(V) * (D, N)
@@ -123,8 +122,8 @@ object Main {
       implicit val kd2l = mapping(Kd(d), L)
 
       for (l <- Kd(d)) {
-        alphaL(d, l) ~ deterministic"$alpha * ${K_L(kd2l(l))} * ${Lambda(d, kd2l(l))}"
-        alphaT(d, kd2l(l)) ~ deterministic"$alpha * ${K_L(kd2l(l))}"
+        alphaL(d, l) ~ deterministic"$alpha * ${K_L(d, l)} * ${Lambda(d, kd2l(l))}"
+        alphaT(d, l) ~ deterministic"$alpha * ${K_L(d, l)}"
         theta(d, l) ~ dirichlet(alphaT(d, l))
       }
 
