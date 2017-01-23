@@ -59,6 +59,30 @@ class Model(
     }
     def id(v: VarID): String = s"${this.id}_${v.str}"
     val transpose = true
+    def renderExpr(v: VarID, expr: Generator.Expr): String = {
+      def render(a: Any): String = a match {
+        case Var.Simple(id, t) =>
+          id.str
+        case a @ Var.Access(vec, i) =>
+          val path = a.path.map(_.id.asIndex)
+          val vPath = index(v)
+          val pos = vPath.zipWithIndex.lastIndexWhere {
+            case (vid, i) =>
+              i < path.size && path(i) == vid
+          }
+          val visibleIndices =
+            if (pos == -1) a.path.map(_.id.str)
+            else a.path.drop(pos + 1).map(_.id.str)
+          if (visibleIndices.isEmpty) a.id.str
+          else s"${a.id.str}(${visibleIndices.mkString(", ")})"
+      }
+      var s = expr.parts(0)
+      for (i <- 1 until expr.parts.size) {
+        s += render(expr.args(i - 1))
+        s += expr.parts(i)
+      }
+      s
+    }
     def renderVar(v: VarID): String = {
       generator(v) match {
         case Generator.Given(desc) if !varType(v).isInstanceOf[Type.Size[_]] =>
@@ -69,21 +93,21 @@ class Model(
             label = Seq(repr(v)) ++ desc.toSeq
           )
         case Generator.Given(desc) => ""
-        case Generator.Stochastic(desc, deps) =>
+        case g @ Generator.Stochastic(expr, deps) =>
           Dot.record(
             id(v),
             transpose = transpose,
             style = if (observed(v)) "filled" else "",
             m = true,
-            label = Seq(repr(v)) ++ desc.toSeq
+            label = Seq(repr(v)) ++ expr.map(e => renderExpr(v, e)).toSeq
           )
-        case Generator.Deterministic(desc, deps) =>
+        case g @ Generator.Deterministic(expr, deps) =>
           Dot.record(
             id(v),
             transpose = transpose,
             style = if (observed(v)) "filled,dotted" else "dotted",
             m = true,
-            label = Seq(repr(v)) ++ desc.toSeq
+            label = Seq(repr(v)) ++ expr.map(e => renderExpr(v, e)).toSeq
           )
       }
     }

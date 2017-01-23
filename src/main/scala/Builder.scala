@@ -63,30 +63,15 @@ class Builder(id: String) { self =>
     private[this] def opt(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
     implicit class ComputationString(sc: StringContext) {
-      private[this] def computationStr(args: Seq[Any]): String = {
-        require(args.size == sc.parts.size - 1)
-        def render(a: Any): String = a match {
-          case Var.Simple(id, t) =>
-            id.str
-          case a @ Var.Access(vec, i) =>
-            s"${a.id.str}(${a.path.map(_.id.str).mkString(", ")})"
-        }
-        var s = sc.parts(0)
-        for (i <- 1 until sc.parts.size) {
-          s += render(args(i - 1))
-          s += sc.parts(i)
-        }
-        s
-      }
       private[this] def filterVars(args: Seq[Any]): Seq[Var[_]] =
         args.collect { case v: Var[_] => v }
       private[this] def deps(v: Var[_]): Set[VarID] =
         v.deps + v.id
 
       def stochastic[A <: Type](args: Any*): Generator.Stochastic[A] =
-        new Generator.Stochastic(Some(computationStr(args)), filterVars(args).flatMap(deps).toSet)
+        new Generator.Stochastic(Some(new Generator.Expr(sc.parts, args)), filterVars(args).flatMap(deps).toSet)
       def deterministic[A <: Type](args: Any*): Generator.Deterministic[A] =
-        new Generator.Deterministic(Some(computationStr(args)), filterVars(args).flatMap(deps).toSet)
+        new Generator.Deterministic(Some(new Generator.Expr(sc.parts, args)), filterVars(args).flatMap(deps).toSet)
     }
 
     def size(id: String, desc: String = ""): Var[Type.Size[id.type]] =
