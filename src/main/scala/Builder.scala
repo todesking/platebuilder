@@ -68,8 +68,8 @@ class Builder(id: String) { self =>
         def render(a: Any): String = a match {
           case Var.Simple(id, t) =>
             id.str
-          case Var.Access(vec, i) =>
-            vec.id.str
+          case a @ Var.Access(vec, i) =>
+            s"${a.id.str}(${a.path.map(_.id.str).mkString(", ")})"
         }
         var s = sc.parts(0)
         for (i <- 1 until sc.parts.size) {

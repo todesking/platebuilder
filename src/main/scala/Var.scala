@@ -65,6 +65,10 @@ object Var {
     override def id: VarID = vec.id
     override def varType: T = vec.varType.elementType
     override def deps: Set[VarID] = vec.deps ++ index.deps + index.id
+    def path: Seq[Var[Category[_]]] = vec match {
+      case Simple(_, _) => Seq(index.asInstanceOf[Var[Category[_]]])
+      case a @ Access(v, i) => a.path ++ Seq(index.asInstanceOf[Var[Category[_]]])
+    }
   }
 
   implicit class SizeVar[I <: String](self: Var[Size[I]]) {
