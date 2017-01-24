@@ -1,3 +1,6 @@
 package com.todesking.platebuilder
-case class IndexID(str: String) // TODO: IndexType(Var|Constant)
 
+// TODO: IndexType(Var|Constant)
+case class IndexID(str: String) {
+  def asVar: VarID = VarID(str)
+}

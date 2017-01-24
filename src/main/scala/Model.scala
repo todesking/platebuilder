@@ -119,7 +119,8 @@ class Model(
       }
     def visibleInEdges(v: VarID): Set[VarID] =
       inEdges(v).flatMap { v2 =>
-        if (varType(v2).isInstanceOf[Type.Size[_]]) visibleInEdges(v2)
+        if (index(v).contains(v2.asIndex)) Set.empty[VarID]
+        else if (varType(v2).isInstanceOf[Type.Size[_]]) visibleInEdges(v2)
         else Set(v2)
       }
     val descs =

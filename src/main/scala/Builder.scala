@@ -53,6 +53,7 @@ class Builder(id: String) { self =>
     }
   }
   def setGenerator(id: VarID, g: Generator[_ <: Type]): Unit = {
+    inEdges.remove(id)
     g.dependencies.foreach { d =>
       inEdges.addBinding(id, d)
     }
@@ -62,14 +63,16 @@ class Builder(id: String) { self =>
   object dsl {
     private[this] def opt(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
-    implicit class ComputationString(sc: StringContext) {
+    implicit class GeneratorSyntax(sc: StringContext) {
       private[this] def filterVars(args: Seq[Any]): Seq[Var[_]] =
         args.collect { case v: Var[_] => v }
+
       private[this] def deps(v: Var[_]): Set[VarID] =
         v.deps + v.id
 
       def stochastic[A <: Type](args: Any*): Generator.Stochastic[A] =
         new Generator.Stochastic(Some(new Generator.Expr(sc.parts, args)), filterVars(args).flatMap(deps).toSet)
+
       def deterministic[A <: Type](args: Any*): Generator.Deterministic[A] =
         new Generator.Deterministic(Some(new Generator.Expr(sc.parts, args)), filterVars(args).flatMap(deps).toSet)
     }
