@@ -77,6 +77,13 @@ class Builder(id: String) { self =>
         new Generator.Deterministic(Some(new Generator.Expr(sc.parts, args)), filterVars(args).flatMap(deps).toSet)
     }
 
+    def const(n: Double): Var[Type.Real] = {
+      val v = new Var.Constant(VarID(s"constant_R_${n}"), n, Type.Real)
+      self.registerVar(v, None, true)
+      self.setGenerator(v.id, new Generator.Deterministic(None, Set()))
+      v
+    }
+
     def size(id: String, desc: String = ""): Var[Type.Size[id.type]] =
       given(id, desc).size
 
@@ -97,6 +104,9 @@ class Builder(id: String) { self =>
 
     def multinominal[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator.Stochastic[Type.Category[I]] =
       stochastic"Mult($param)"
+
+    def normal(mu: Var[Type.Real], s2: Var[Type.Real]): Generator.Stochastic[Type.Real] =
+      stochastic"Normal($mu, $s2)"
 
     def mapping[A <: String, B <: String](a: Var[Type.Size[A]], b: Var[Type.Size[B]]): Builder.Mapping[A, B] =
       new Builder.Mapping(a.varType, b.varType)

@@ -139,7 +139,36 @@ object Main {
     }
   }
 
-  val Deep = Model.define("Deep") { implicit ctx =>
+  val BLR = Model.define("BayesianLinearRegression") { implicit ctx =>
+    import ctx.dsl._
+
+    val N = size("N", "Num of data points")
+    val D = size("D", "Num of features")
+
+    val s2_w = given("σ^2_w").R
+    val s2_b = given("σ^2_b").R
+    val s2_y = given("σ^2_y").R
+
+    val x = observed("x").realVec(D) * N
+    val w = hidden("w").realVec(D)
+    val b = hidden("b").R
+    val mu = hidden("μ").R * N
+    val y = observed("y").R * N
+
+    for (d <- D) {
+      w(d) ~ normal(const(0.0), s2_w)
+    }
+
+    b ~ normal(const(0.0), s2_b)
+
+    for (n <- N) {
+      mu(n) ~ stochastic"${x(n)} * $w + $b"
+      y(n) ~ normal(mu(n), s2_y)
+    }
+
+  }
+
+  val Sample = Model.define("Sample") { implicit ctx =>
     import ctx.dsl._
     val D = size("D")
     val C = size("C") * D
@@ -187,7 +216,7 @@ object Main {
     }
   }
 
-  val models = Seq(Unigram, MixtureOfUnigrams, LDA, PLDA, Deep)
+  val models = Seq(Unigram, MixtureOfUnigrams, LDA, PLDA, BLR, Sample)
 
   def main(args: Array[String]): Unit = {
     println(Model.toDot(models))

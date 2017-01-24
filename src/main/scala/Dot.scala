@@ -14,6 +14,14 @@ object Dot {
         s"&#${c.toInt};"
       }
     }
+  def idEscape(s: String): String =
+    s.flatMap {
+      case c if ('a' <= c && c <= 'z') => c.toString
+      case c if ('A' <= c && c <= 'Z') => c.toString
+      case c if ('0' <= c && c <= '9') => c.toString
+      case c @ '_' => c.toString
+      case c => s"_${c.toInt}"
+    }
 
   def escapeRecord(s: String): String =
     s.flatMap {
@@ -22,7 +30,7 @@ object Dot {
     }
 
   def node(id: String, shape: String = "ellipse", style: String = "", label: String = ""): String =
-    s"""${id}[shape=${shape} ${attr("label", escape(label))} ${attr("style", style)}];"""
+    s"""${idEscape(id)}[shape=${shape} ${attr("label", escape(label))} ${attr("style", style)}];"""
 
   def record(id: String, m: Boolean = false, style: String = "", label: Seq[String] = Seq(), transpose: Boolean = false): String = {
     val l = label.map(escapeRecord).mkString("|")
@@ -30,7 +38,7 @@ object Dot {
   }
 
   def edge(from: String, to: String): String =
-    s"${from} -> ${to};"
+    s"${idEscape(from)} -> ${idEscape(to)};"
 
   def subGraph(
     id: String,
@@ -38,7 +46,7 @@ object Dot {
     labeljust: String = "",
     labelloc: String = ""
   )(f: => String): String =
-    s"""subgraph $id {
+    s"""subgraph ${idEscape(id)} {
        |${attrL("label", escape(label))}
        |${attrL("labeljust", labeljust)}
        |${attrL("labeltoc", labelloc)}
@@ -46,7 +54,7 @@ object Dot {
        |}""".stripMargin
 
   def digraph(id: String)(f: => String): String =
-    s"""digraph $id {
+    s"""digraph ${idEscape(id)} {
        |${f}
        |}""".stripMargin
 }

@@ -63,6 +63,8 @@ class Model(
       def render(a: Any): String = a match {
         case Var.Simple(id, t) =>
           id.str
+        case Var.Constant(id, _, _) =>
+          id.str
         case a @ Var.Access(vec, i) =>
           val path = a.path.map(_.id.asIndex)
           val vPath = index(v)

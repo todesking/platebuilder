@@ -58,6 +58,9 @@ object Var {
   case class Simple[T <: Type](override val id: VarID, override val varType: T) extends Var[T] {
     override def deps = Set()
   }
+  case class Constant[T <: Type](override val id: VarID, value: Any, override val varType: T) extends Var[T] {
+    override def deps = Set()
+  }
   case class Access[T <: Type, I <: String](
       vec: Var[Vec[I, T]],
       index: Var[Category[I]]
