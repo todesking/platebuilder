@@ -122,8 +122,10 @@ object Main {
       implicit val kd2l = mapping(Kd(d), L)
 
       for (l <- Kd(d)) {
+        for (k <- K) {
+          alphaT(d, l, k) ~ deterministic"$alpha * ${K_L(d, l)} if topic ${k} is assigned to ${Lambda(d, l)}\n0 otherwise"
+        }
         alphaL(d, l) ~ deterministic"$alpha * ${K_L(d, l)} * ${Lambda(d, kd2l(l))}"
-        alphaT(d, l) ~ deterministic"$alpha * ${K_L(d, l)}"
         theta(d, l) ~ dirichlet(alphaT(d, l))
       }
 
