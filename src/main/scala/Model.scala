@@ -132,8 +132,8 @@ class Model(
           ""
       }
     }
-    def renderEdge(from: VarID, to: VarID): String =
-      Dot.edge(id(from), id(to))
+    def renderEdge(from: VarID, to: VarID, stochastic: Boolean): String =
+      Dot.edge(id(from), id(to), arrowhead = if (stochastic) "" else "box")
     def renderChild(c: Grouped.Child): String =
       Dot.subGraph(s"cluster_${c.index.str}", label = c.index.str, labeljust = "r", labelloc = "b") {
         (c.vars.map(renderVar) ++ c.children.map(renderChild)).mkString("\n")
@@ -163,7 +163,11 @@ class Model(
         grouped.vars.map(renderVar),
         grouped.children.map(renderChild),
         vars.flatMap { v =>
-          visibleInEdges(v).map { v2 => renderEdge(v2, v) }
+          val stochastic = generator(v) match {
+            case Generator.Expr(s, _, _, _) => s
+            case _ => false
+          }
+          visibleInEdges(v).map { v2 => renderEdge(v2, v, stochastic) }
         },
         descNode
       ).flatten.mkString("\n")

@@ -37,8 +37,8 @@ object Dot {
     node(id, shape = if (m) "Mrecord" else "record", style = style, label = if (transpose) s"{$l}" else l)
   }
 
-  def edge(from: String, to: String): String =
-    s"${idEscape(from)} -> ${idEscape(to)};"
+  def edge(from: String, to: String, style: String = "", arrowtail: String = "", arrowhead: String = ""): String =
+    s"${idEscape(from)} -> ${idEscape(to)} [${attr("style", style)} ${attr("arrowtail", arrowtail)} ${attr("arrowhead", arrowhead)}];"
 
   def subGraph(
     id: String,
