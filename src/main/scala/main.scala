@@ -218,7 +218,24 @@ object Main {
     }
   }
 
-  val models = Seq(Unigram, MixtureOfUnigrams, LDA, PLDA, BLR, Sample)
+  val Legend = Model.define("Legend") { implicit ctx =>
+    import ctx.dsl._
+    val Size = size("Size")
+    val hiddenVar = hidden("H", "Hidden variable").R
+    val observedVar = observed("O", "Observed variable").R
+    val givenVar = given("G", "Given constant(Hyper parameter)").R
+    val det = hidden("D", "Deterministic computation").R * Size
+    val sto = hidden("S", "Stochastic computation").R * Size
+
+    hiddenVar ~ normal(observedVar, const(1.0))
+
+    for (s <- Size) {
+      det(s) ~ deterministic"f(${givenVar})"
+      sto(s) ~ stochastic"g(${givenVar})"
+    }
+  }
+
+  val models = Seq(Unigram, MixtureOfUnigrams, LDA, PLDA, BLR, Sample, Legend)
 
   def main(args: Array[String]): Unit = {
     println(Model.toDot(models))
