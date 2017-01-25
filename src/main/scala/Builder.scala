@@ -13,7 +13,7 @@ class Builder(id: String) { self =>
   private[this] var descs: Map[VarID, String] = Map()
   private[this] var observations: Map[VarID, Observation] = Map()
 
-  private[this] var _currentIndices: Seq[IndexID] = Seq()
+  private[this] var _currentPath: Seq[IndexID] = Seq()
 
   def build(): Model = {
     val missingGenerators = vars.keys.filterNot { id => generators.contains(id) }
@@ -38,46 +38,68 @@ class Builder(id: String) { self =>
     )
   }
 
-  def registerVar(v: Var[_ <: Type], desc: Option[String]): Unit = {
+  def newVar(v: Var[_ <: Type], observation: Option[Observation], description: Option[String]): Unit = {
+    setVar(v)
+    description.foreach(setDescription(v.id, _))
+    observation match {
+      case Some(Observation.Given) =>
+        setGenerator(v, Seq(), Generator.Given(), false)
+      case Some(Observation.Observed) =>
+        setGenerator(v, Seq(), Generator.Given(), false)
+      case Some(_) | None =>
+    }
+    observation.foreach(setObservation(v.id, _))
+  }
+
+  def newConst(v: Var[_ <: Type], repr: String): Unit = {
+    setVar(v)
+    setObservation(v.id, Observation.Given)
+    setGenerator(v, Seq(), Generator.Const(repr), true)
+  }
+
+  private[this] def setVar(v: Var[_ <: Type]): Unit = {
     if (!vars.contains(v.id)) {
       varOrder :+= v.id
     }
     vars += (v.id -> v)
-    desc.foreach { d =>
-      descs += (v.id -> d)
-    }
   }
 
-  // TODO: rename to addIndex
-  def setIndex(id: VarID, index: Seq[IndexID]): Unit = {
+  private[this] def setDescription(vid: VarID, desc: String): Unit = {
+    descs += (vid -> desc)
+  }
+
+  private[this] def setObservation(v: VarID, o: Observation): Unit = {
+    observations += (v -> o)
+  }
+
+  def addIndex(id: VarID, i: Seq[IndexID]): Unit = {
     indices.get(id).fold {
-      indices += (id -> index)
+      indices += (id -> i)
     } { is =>
-      indices += (id -> (index ++ is))
+      indices += (id -> (i ++ is))
     }
-  }
-
-  def setIndex(id: VarID): Unit = {
-    indices += (id -> _currentIndices)
   }
 
   def withIndex[A](i: IndexID)(f: => A): A = {
-    _currentIndices :+= i
+    _currentPath :+= i
     val ret = f
-    _currentIndices = _currentIndices.take(_currentIndices.size - 1)
+    _currentPath = _currentPath.take(_currentPath.size - 1)
     ret
   }
 
-  def setGenerator(id: VarID, g: Generator[_ <: Type]): Unit = {
-    inEdges.remove(id)
-    g.dependencies.foreach { d =>
-      inEdges.addBinding(id, d)
+  def setGenerator(v: Var[_ <: Type], path: Seq[IndexID], g: Generator[_ <: Type], ignoreCurrentPath: Boolean): Unit = {
+    setVar(v)
+    inEdges.remove(v.id)
+    if (!ignoreCurrentPath && path != _currentPath) {
+      val p1 = _currentPath.map(_.str).mkString("(", ", ", ")")
+      val p2 = path.map(_.str).mkString("(", ", ", ")")
+      throw new RuntimeException(s"Path not match for ${v.id.str}: expected ${p1} but ${p2}")
     }
-    generators += (id -> g)
-  }
-
-  def setObservation(v: VarID, o: Observation): Unit = {
-    observations += (v -> o)
+    indices += (v.id -> path)
+    g.dependencies.foreach { d =>
+      inEdges.addBinding(v.id, d)
+    }
+    generators += (v.id -> g)
   }
 
   object dsl {
@@ -99,9 +121,7 @@ class Builder(id: String) { self =>
 
     def const(n: Double): Var[Type.Real] = {
       val v = new Var.Constant(VarID(s"constant_R_${n}"), n, Type.Real)
-      self.registerVar(v, None)
-      self.setObservation(v.id, Observation.Given)
-      self.setGenerator(v.id, new Generator.Const(n.toString))
+      self.newConst(v, n.toString)
       v
     }
 
@@ -141,15 +161,13 @@ object Builder {
     import Type.{ Vec, Size, Category }
     def *[I <: String](dim: Var[Size[I]])(implicit ctx: Builder, ev: Deps =:= (I :: HNil)): Var[Vec[I, E]] = {
       val v = new Var.Simple(id, varType)
-      ctx.registerVar(v, None)
-      observation.foreach(ctx.setObservation(v.id, _))
+      ctx.newVar(v, observation, None)
       v * dim
     }
 
     def *[I1 <: String, I2 <: String](dim1: Var[Size[I1]], dim2: Var[Vec[I1, Size[I2]]])(implicit ctx: Builder, ev: Deps =:= (I1 :: HNil)): Var[Vec[I1, Vec[I2, E]]] = {
       val v = new Var.Simple(id, varType)
-      ctx.registerVar(v, None)
-      observation.foreach(ctx.setObservation(v.id, _))
+      ctx.newVar(v, observation, None)
       v * (dim1, dim2)
     }
   }
@@ -162,17 +180,7 @@ object Builder {
   ) {
     private[this] val id = new VarID(idStr)
     private[this] def register[T <: Type](v: Var[T]): Var[T] = {
-      ctx.registerVar(v, desc)
-      observation match {
-        case Some(Observation.Given) =>
-          ctx.setGenerator(v.id, Generator.Given())
-        case Some(Observation.Observed) =>
-          ctx.setGenerator(v.id, Generator.Given())
-        case Some(_) | None =>
-      }
-      observation.foreach { o =>
-        ctx.setObservation(v.id, o)
-      }
+      ctx.newVar(v, observation, desc)
       v
     }
 

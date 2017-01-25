@@ -7,7 +7,7 @@ abstract class Var[T <: Type] {
   def deps: Set[VarID]
 
   def *[I <: String](dim: Var[Size[I]])(implicit b: Builder): Var[Vec[I, T]] = {
-    b.setIndex(id, Seq(dim.id.asIndex))
+    b.addIndex(id, Seq(dim.id.asIndex))
     new Var.Simple(id, Vec(dim.id.asIndex, varType))
   }
 
@@ -15,7 +15,7 @@ abstract class Var[T <: Type] {
     d1: Var[Size[I1]],
     d2: Var[Vec[I1, Size[I2]]]
   )(implicit b: Builder): Var[Vec[I1, Vec[I2, T]]] = {
-    b.setIndex(id, Seq(d1.id.asIndex, d2.id.asIndex))
+    b.addIndex(id, Seq(d1, d2).map(_.id.asIndex))
     new Var.Simple(id, Vec(d1.id.asIndex, Vec(d2.id.asIndex, varType)))
   }
 
@@ -24,7 +24,7 @@ abstract class Var[T <: Type] {
     d2: Var[Vec[I1, Size[I2]]],
     d3: Var[Vec[I1, Vec[I2, Size[I3]]]]
   )(implicit b: Builder): Var[Vec[I1, Vec[I2, Vec[I3, T]]]] = {
-    b.setIndex(id, Seq(d1.id.asIndex, d2.id.asIndex, d3.id.asIndex))
+    b.addIndex(id, Seq(d1, d2, d3).map(_.id.asIndex))
     new Var.Simple(id, Vec(d1.id.asIndex, Vec(d2.id.asIndex, Vec(d3.id.asIndex, varType))))
   }
 
@@ -34,7 +34,7 @@ abstract class Var[T <: Type] {
     d3: Var[Vec[I1, Vec[I2, Size[I3]]]],
     d4: Var[Vec[I1, Vec[I2, Vec[I3, Size[I4]]]]]
   )(implicit b: Builder): Var[Vec[I1, Vec[I2, Vec[I3, Vec[I4, T]]]]] = {
-    b.setIndex(id, Seq(d1.id.asIndex, d2.id.asIndex, d3.id.asIndex, d4.id.asIndex))
+    b.addIndex(id, Seq(d1, d2, d3, d4).map(_.id.asIndex))
     new Var.Simple(id, Vec(d1.id.asIndex, Vec(d2.id.asIndex, Vec(d3.id.asIndex, Vec(d4.id.asIndex, varType)))))
   }
 
@@ -45,14 +45,16 @@ abstract class Var[T <: Type] {
     d4: Var[Vec[I1, Vec[I2, Vec[I3, Size[I4]]]]],
     d5: Var[Vec[I1, Vec[I2, Vec[I3, Vec[I4, Size[I5]]]]]]
   )(implicit b: Builder): Var[Vec[I1, Vec[I2, Vec[I3, Vec[I4, Vec[I5, T]]]]]] = {
-    b.setIndex(id, Seq(d1.id.asIndex, d2.id.asIndex, d3.id.asIndex, d4.id.asIndex, d5.id.asIndex))
+    b.addIndex(id, Seq(d1, d2, d3, d4, d5).map(_.id.asIndex))
     new Var.Simple(id, Vec(d1.id.asIndex, Vec(d2.id.asIndex, Vec(d3.id.asIndex, Vec(d4.id.asIndex, Vec(d5.id.asIndex, varType))))))
   }
 
   def ~(g: Generator[T])(implicit b: Builder): Unit = {
-    b.registerVar(this, None) // TODO: set desc
-    b.setIndex(id)
-    b.setGenerator(id, g)
+    val path = this match {
+      case v: Var.Access[_, _] => v.path.map(_.id.asIndex)
+      case _ => Seq()
+    }
+    b.setGenerator(this, path, g, false)
   }
 }
 object Var {
