@@ -49,8 +49,11 @@ abstract class Var[T <: Type] {
     new Var.Simple(id, Vec(d1.id.asIndex, Vec(d2.id.asIndex, Vec(d3.id.asIndex, Vec(d4.id.asIndex, Vec(d5.id.asIndex, varType))))))
   }
 
-  def ~(g: Generator[T])(implicit b: Builder): Unit =
+  def ~(g: Generator[T])(implicit b: Builder): Unit = {
+    b.registerVar(this, None) // TODO: set desc
+    b.setIndex(id)
     b.setGenerator(id, g)
+  }
 }
 object Var {
   import Type.{ Vec, Category, Size }
@@ -75,8 +78,10 @@ object Var {
   }
 
   implicit class SizeVar[I <: String](self: Var[Size[I]]) {
-    def foreach(f: Var[Category[I]] => Unit): Unit = {
-      f(new Var.Simple(self.id, Category(self.varType)))
+    def foreach(f: Var[Category[I]] => Unit)(implicit b: Builder): Unit = {
+      b.withIndex(self.id.asIndex) {
+        f(new Var.Simple(self.id, Category(self.varType)))
+      }
     }
   }
   implicit class Vec1Ops[I <: String, E <: Type](self: Var[Vec[I, E]]) {

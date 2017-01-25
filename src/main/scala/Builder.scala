@@ -13,6 +13,8 @@ class Builder(id: String) { self =>
   private[this] var descs: Map[VarID, String] = Map()
   private[this] var observations: Map[VarID, Observation] = Map()
 
+  private[this] var _currentIndices: Seq[IndexID] = Seq()
+
   def build(): Model = {
     val missingGenerators = vars.keys.filterNot { id => generators.contains(id) }
     if (missingGenerators.nonEmpty) {
@@ -54,6 +56,18 @@ class Builder(id: String) { self =>
       indices += (id -> (index ++ is))
     }
   }
+
+  def setIndex(id: VarID): Unit = {
+    indices += (id -> _currentIndices)
+  }
+
+  def withIndex[A](i: IndexID)(f: => A): A = {
+    _currentIndices :+= i
+    val ret = f
+    _currentIndices = _currentIndices.take(_currentIndices.size - 1)
+    ret
+  }
+
   def setGenerator(id: VarID, g: Generator[_ <: Type]): Unit = {
     inEdges.remove(id)
     g.dependencies.foreach { d =>

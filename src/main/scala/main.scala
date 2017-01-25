@@ -179,6 +179,8 @@ object Main {
 
     val K = size("K")
 
+    val unused = given("unused").realVec(D) * D
+
     val alpha = given("α").realVec(K)
     val beta = given("β").realVec(V)
 
