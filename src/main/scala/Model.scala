@@ -3,19 +3,24 @@ package com.todesking.platebuilder
 class Model(
     id: String,
     varOrder: Seq[VarID],
-    _vars: Map[VarID, (Type, String, Boolean)],
+    _vars: Map[VarID, Var[_ <: Type]],
     indices: Map[VarID, Seq[IndexID]],
     _inEdges: Map[VarID, Set[VarID]],
-    generators: Map[VarID, Generator[_]],
+    generators: Map[VarID, Generator[_ <: Type]],
+    observations: Map[VarID, Observation],
     descriptions: Map[VarID, String]
 ) {
   import Model._
 
   def vars: Seq[VarID] = varOrder
-  def varType(id: VarID): Type = _vars(id)._1
-  def repr(id: VarID): String = _vars(id)._2
-  def observed(id: VarID): Boolean = _vars(id)._3
+  def varType(id: VarID): Type = _vars(id).varType
+  def repr(id: VarID): String = _vars(id) match {
+    case Var.Constant(id, value, t) => value.toString
+    case v => v.id.str
+  }
+  def observation(id: VarID): Observation = observations(id)
   def index(id: VarID): Seq[IndexID] = indices.get(id) getOrElse Seq()
+  def desc(id: VarID): Option[String] = descriptions.get(id)
   def inEdges(id: VarID): Set[VarID] = _inEdges.get(id) getOrElse Set()
   def generator(id: VarID): Generator[_] = generators(id)
 
@@ -59,12 +64,12 @@ class Model(
     }
     def id(v: VarID): String = s"${this.id}_${v.str}"
     val transpose = true
-    def renderExpr(v: VarID, expr: Generator.Expr): String = {
+    def renderExpr(v: VarID, parts: Seq[String], args: Seq[Any]): String = {
       def render(a: Any): String = a match {
         case Var.Simple(id, t) =>
           id.str
-        case Var.Constant(id, _, _) =>
-          id.str
+        case Var.Constant(id, v, _) =>
+          v.toString
         case a @ Var.Access(vec, i) =>
           val path = a.path.map(_.id.asIndex)
           val vPath = index(v)
@@ -78,39 +83,53 @@ class Model(
           if (visibleIndices.isEmpty) a.id.str
           else s"${a.id.str}(${visibleIndices.mkString(", ")})"
       }
-      var s = expr.parts(0)
-      for (i <- 1 until expr.parts.size) {
-        s += render(expr.args(i - 1))
-        s += expr.parts(i)
+      var s = parts(0)
+      for (i <- 1 until parts.size) {
+        s += render(args(i - 1))
+        s += parts(i)
       }
       s
     }
+    def isVisible(v: VarID): Boolean =
+      !generator(v).isInstanceOf[Generator.Const[_]]
+
     def renderVar(v: VarID): String = {
-      generator(v) match {
-        case Generator.Given(desc) if !varType(v).isInstanceOf[Type.Size[_]] =>
+      val isSize = varType(v).isInstanceOf[Type.Size[_]]
+      val (stochastic, definition) = generator(v) match {
+        case Generator.Const(value) => (false, Seq(value))
+        case Generator.Expr(stochastic, deps, parts, args) =>
+          (stochastic, Seq(renderExpr(v, parts, args)))
+        case Generator.Given() =>
+          (false, Seq())
+      }
+      observation(v) match {
+        case _ if !isVisible(v) =>
+          ""
+        case Observation.Hidden =>
           Dot.record(
             id(v),
             transpose = transpose,
-            style = if (observed(v)) "filled" else "",
-            label = Seq(repr(v)) ++ desc.toSeq
-          )
-        case Generator.Given(desc) => ""
-        case g @ Generator.Stochastic(expr, deps) =>
-          Dot.record(
-            id(v),
-            transpose = transpose,
-            style = if (observed(v)) "filled" else "",
+            style = "",
             m = true,
-            label = Seq(repr(v)) ++ expr.map(e => renderExpr(v, e)).toSeq
+            label = repr(v) +: definition
           )
-        case g @ Generator.Deterministic(expr, deps) =>
+        case Observation.Observed =>
           Dot.record(
             id(v),
             transpose = transpose,
-            style = if (observed(v)) "filled,dotted" else "dotted",
+            style = "filled",
             m = true,
-            label = Seq(repr(v)) ++ expr.map(e => renderExpr(v, e)).toSeq
+            label = repr(v) +: definition
           )
+        case Observation.Given if !isSize =>
+          Dot.record(
+            id(v),
+            transpose = transpose,
+            style = "",
+            label = repr(v) +: definition
+          )
+        case Observation.Given =>
+          ""
       }
     }
     def renderEdge(from: VarID, to: VarID): String =
@@ -121,7 +140,8 @@ class Model(
       }
     def visibleInEdges(v: VarID): Set[VarID] =
       inEdges(v).flatMap { v2 =>
-        if (index(v).contains(v2.asIndex)) Set.empty[VarID]
+        if (!isVisible(v2)) Set.empty[VarID]
+        else if (index(v).contains(v2.asIndex)) Set.empty[VarID]
         else if (varType(v2).isInstanceOf[Type.Size[_]]) visibleInEdges(v2)
         else Set(v2)
       }

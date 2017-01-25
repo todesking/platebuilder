@@ -1,19 +1,17 @@
 package com.todesking.platebuilder
 
-abstract class Generator[T <: Type] {
+sealed abstract class Generator[T <: Type] {
   def dependencies: Set[VarID]
 }
 object Generator {
-  case class Given[T <: Type](descripiton: Option[String]) extends Generator[T] {
+  case class Expr[T <: Type](stochastic: Boolean, override val dependencies: Set[VarID], parts: Seq[String], args: Seq[Any]) extends Generator[T] {
+    require(args.size == parts.size - 1)
+  }
+  case class Const[T <: Type](repr: String) extends Generator[T] {
     override def dependencies = Set()
   }
-  case class Stochastic[T <: Type](expr: Option[Expr], override val dependencies: Set[VarID]) extends Generator[T] {
-  }
-  case class Deterministic[T <: Type](expr: Option[Expr], override val dependencies: Set[VarID]) extends Generator[T] {
-  }
-
-  case class Expr(parts: Seq[String], args: Seq[Any]) {
-    require(args.size == parts.size - 1)
+  case class Given[T <: Type]() extends Generator[T] {
+    override def dependencies = Set()
   }
 }
 
