@@ -157,18 +157,45 @@ object Builder {
   class Mapping[A <: String, B <: String](t1: Type.Size[A], t2: Type.Size[B]) extends Function1[Var[Type.Category[A]], Var[Type.Category[B]]] {
     override def apply(a: Var[Type.Category[A]]): Var[Type.Category[B]] = new Var.Simple(a.id, new Type.Category(t2))
   }
+
   class Incomplete[Deps <: HList, E <: Type](val id: VarID, val varType: E, val observation: Option[Observation]) {
     import Type.{ Vec, Size, Category }
-    def *[I <: String](dim: Var[Size[I]])(implicit ctx: Builder, ev: Deps =:= (I :: HNil)): Var[Vec[I, E]] = {
+    def *[I <: String](dim: Var[Size[I]])(implicit ctx: Builder, ev: HList.ContainsOnly[Deps, I]): Var[Vec[I, E]] = {
       val v = new Var.Simple(id, varType)
       ctx.newVar(v, observation, None)
       v * dim
     }
 
-    def *[I1 <: String, I2 <: String](dim1: Var[Size[I1]], dim2: Var[Vec[I1, Size[I2]]])(implicit ctx: Builder, ev: Deps =:= (I1 :: HNil)): Var[Vec[I1, Vec[I2, E]]] = {
+    def *[I1 <: String, I2 <: String](dim1: Var[Size[I1]], dim2: Var[Vec[I1, Size[I2]]])(implicit ctx: Builder, ev: HList.ContainsOnly[Deps, I1]): Var[Vec[I1, Vec[I2, E]]] = {
       val v = new Var.Simple(id, varType)
       ctx.newVar(v, observation, None)
       v * (dim1, dim2)
+    }
+  }
+  object Incomplete {
+    import Type.{ Size, Vec }
+    implicit class Vec1Ops[Deps <: HList, E <: Type, I <: String](self: Incomplete[Deps, Vec[I, E]]) {
+      def apply[D2 <: HList](i: Incomplete[D2, Size[I]])(implicit aux: Aux[Deps, D2, E, I]): aux.Result =
+        aux(self, i)
+    }
+
+    sealed abstract class Aux[D1 <: HList, D2 <: HList, E <: Type, I <: String] {
+      type Result
+      def apply(self: Incomplete[D1, Vec[I, E]], i: Incomplete[D2, Size[I]]): Result
+    }
+    object Aux {
+      sealed abstract class HasDep[D1 <: HList, D2 <: HList, D <: HList, E <: Type, I <: String] extends Aux[D1, D2, E, I] {
+        override type Result = Incomplete[D, E]
+      }
+
+      implicit def incomplete[D1 <: HList, D2 <: HList, E <: Type, I <: String](
+        implicit
+        ev: HList.Concat[D1, D2]
+      ): HasDep[D1, D2, ev.Result, E, I] =
+        new HasDep[D1, D2, ev.Result, E, I] {
+          override def apply(self: Incomplete[D1, Vec[I, E]], i: Incomplete[D2, Size[I]]) =
+            new Incomplete(self.id, self.varType.elementType, self.observation)
+        }
     }
   }
 

@@ -192,6 +192,15 @@ object Main {
     val w = observed("w").category(V) * (D, C, S, P, N)
     val y = observed("y").category(K) * (D, C, S)
     val a = observed("a").R * (D, C)
+    val b = hidden("b").realVec(S(D)(C(D))) * (D, C)
+
+    for (d <- D) {
+      for (c <- C(d)) {
+        for (s <- S(d, c)) {
+          b(d, c, s) ~ deterministic"${const(0.0)}"
+        }
+      }
+    }
 
     for (k <- K) {
       phi(k) ~ dirichlet(beta)
