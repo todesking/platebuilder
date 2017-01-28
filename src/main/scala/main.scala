@@ -6,16 +6,16 @@ import scala.language.higherKinds
 object Main {
   val Unigram = Model.define("Unigram") { implicit ctx =>
     import ctx.dsl._
-    val V = size("V", "Number of vocabularies")
-    val D = size("D", "Number of documents")
-    val N = size("N", "Number of words for each documents") * D
+    val V = size.V("Number of vocabularies")
+    val D = size.D("Number of documents")
+    val N = size.N("Number of words for each documents") * D
 
     // hyperparameters
     val beta = given.beta.realVec(V)
 
     // variables
     val phi = hidden.phi.realVec(V)
-    val w = observed("w").category(V) * (D, N)
+    val w = observed.w.category(V) * (D, N)
 
     phi ~ dirichlet(beta)
 
@@ -28,10 +28,10 @@ object Main {
 
   val MixtureOfUnigrams = Model.define("MixtureOfUnigrams") { implicit ctx =>
     import ctx.dsl._
-    val K = size("K", "Number of topics")
-    val V = size("V", "Number of vocabularies")
-    val D = size("D", "Number of documents")
-    val N = size("N", "Number of words for each documents") * D
+    val K = size.K("Number of topics")
+    val V = size.V("Number of vocabularies")
+    val D = size.D("Number of documents")
+    val N = size.N("Number of words for each documents") * D
 
     // hyperparameters
     val alpha = given.alpha.realVec(K)
@@ -41,7 +41,7 @@ object Main {
     val phi = hidden.phi.realVec(V) * K
     val theta = hidden.theta.realVec(K)
     val z = hidden("z", "Hidden topic for each document").category(K) * D
-    val w = observed("w").category(V) * (D, N)
+    val w = observed.w.category(V) * (D, N)
 
     for (k <- K) {
       phi(k) ~ dirichlet(beta)
@@ -59,10 +59,10 @@ object Main {
 
   val LDA = Model.define("LDA") { implicit ctx =>
     import ctx.dsl._
-    val K = size("K", "Number of topics")
-    val V = size("V", "Number of vocabularies")
-    val D = size("D", "Number of documents")
-    val N = size("N", "Number of words for each documents") * D
+    val K = size.K("Number of topics")
+    val V = size.V("Number of vocabularies")
+    val D = size.D("Number of documents")
+    val N = size.N("Number of words for each documents") * D
 
     // hyperparameters
     val alpha = given.alpha.realVec(K)
@@ -72,7 +72,7 @@ object Main {
     val phi = hidden.phi.realVec(V) * K
     val theta = hidden.theta.realVec(K) * D
     val z = hidden("z", "Hidden topic for each word").category(K) * (D, N)
-    val w = observed("w").category(V) * (D, N)
+    val w = observed.w.category(V) * (D, N)
 
     for (k <- K) {
       phi(k) ~ dirichlet(beta)
@@ -89,11 +89,11 @@ object Main {
 
   val PLDA = Model.define("PLDA") { implicit ctx =>
     import ctx.dsl._
-    val K = size("K", "Num of topics")
-    val V = size("V", "Num of vocabularies")
-    val D = size("D", "Num of documents")
-    val N = size("N", "Num of words for each document") * D
-    val L = size("L", "Num of labels")
+    val K = size.K("Num of topics")
+    val V = size.V("Num of vocabularies")
+    val D = size.D("Num of documents")
+    val N = size.N("Num of words for each document") * D
+    val L = size.L("Num of labels")
     val Kd = computed("Kd", "Num of labels assigned for each document").size * D
     val K_L = size("K_L", "Num of topics assigned for each document and label") * (D, Kd)
 
@@ -106,12 +106,12 @@ object Main {
 
     // variables
     val phi = hidden.phi.realVec(V) * K
-    val theta = hidden("θ", "Topic distribution").realVec(K) * (D, Kd)
+    val theta = hidden.theta("Topic distribution").realVec(K) * (D, Kd)
     val Lambda = observed.Lambda("Assigned labels").binaryVec(L) * D
-    val psi = hidden("ψ").realVec(Kd(D)) * D
-    val z = hidden("z").category(K) * (D, N)
-    val w = observed("w").category(V) * (D, N)
-    val l = hidden("l").category(Kd(D)) * (D, N)
+    val psi = hidden.psi.realVec(Kd(D)) * D
+    val z = hidden.z.category(K) * (D, N)
+    val w = observed.w.category(V) * (D, N)
+    val l = hidden.l.category(Kd(D)) * (D, N)
 
     for (k <- K) {
       phi(k) ~ dirichlet(beta)
@@ -142,18 +142,18 @@ object Main {
   val BLR = Model.define("BayesianLinearRegression") { implicit ctx =>
     import ctx.dsl._
 
-    val N = size("N", "Num of data points")
-    val D = size("D", "Num of features")
+    val N = size.N("Num of data points")
+    val D = size.D("Num of features")
 
     val s2_w = given("σ^2_w").R
     val s2_b = given("σ^2_b").R
     val s2_y = given("σ^2_y").R
 
-    val x = observed("x").realVec(D) * N
-    val w = hidden("w").realVec(D)
-    val b = hidden("b").R
+    val x = observed.x.realVec(D) * N
+    val w = hidden.w.realVec(D)
+    val b = hidden.b.R
     val mu = hidden.mu.R * N
-    val y = observed("y").R * N
+    val y = observed.y.R * N
 
     for (d <- D) {
       w(d) ~ normal(const(0.0), s2_w)
@@ -170,14 +170,14 @@ object Main {
 
   val Sample = Model.define("Sample") { implicit ctx =>
     import ctx.dsl._
-    val D = size("D")
-    val C = size("C") * D
-    val S = size("S") * (D, C)
-    val P = size("P") * (D, C, S)
-    val N = size("N") * (D, C, S, P)
-    val V = size("V")
+    val D = size.D
+    val C = size.C * D
+    val S = size.S * (D, C)
+    val P = size.P * (D, C, S)
+    val N = size.N * (D, C, S, P)
+    val V = size.V
 
-    val K = size("K")
+    val K = size.K
 
     val unused = given("unused").realVec(D) * D
 
@@ -185,14 +185,14 @@ object Main {
     val beta = given.beta.realVec(V)
 
     val phi = hidden.phi.realVec(V) * K
-    val eta = hidden("η").realVec(K) * D
+    val eta = hidden.eta.realVec(K) * D
     val zeta = hidden.zeta.category(K) * K * D
     val theta = hidden.theta.realVec(K) * (D, C)
-    val z = hidden("z").category(K) * (D, C, S, P, N)
-    val w = observed("w").category(V) * (D, C, S, P, N)
-    val y = observed("y").category(K) * (D, C, S)
-    val a = observed("a").R * (D, C)
-    val b = hidden("b").realVec(S(D)(C(D))) * (D, C)
+    val z = hidden.z.category(K) * (D, C, S, P, N)
+    val w = observed.w.category(V) * (D, C, S, P, N)
+    val y = observed.y.category(K) * (D, C, S)
+    val a = observed.a.R * (D, C)
+    val b = hidden.b.realVec(S(D)(C(D))) * (D, C)
 
     for (d <- D) {
       for (c <- C(d)) {
@@ -230,11 +230,11 @@ object Main {
   val Legend = Model.define("Legend") { implicit ctx =>
     import ctx.dsl._
     val Size = size("Size")
-    val hiddenVar = hidden("H", "Hidden variable").R
-    val observedVar = observed("O", "Observed variable").R
-    val givenVar = given("G", "Given constant(Hyper parameter)").R
-    val det = hidden("D", "Deterministic computation").R * Size
-    val sto = hidden("S", "Stochastic computation").R * Size
+    val hiddenVar = hidden.H("Hidden variable").R
+    val observedVar = observed("Observed variable").R
+    val givenVar = given.G("Given constant(Hyper parameter)").R
+    val det = hidden.D("Deterministic computation").R * Size
+    val sto = hidden.S("Stochastic computation").R * Size
 
     hiddenVar ~ normal(observedVar, const(1.0))
 

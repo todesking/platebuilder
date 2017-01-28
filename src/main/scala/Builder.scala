@@ -1,5 +1,7 @@
 package com.todesking.platebuilder
 
+import scala.language.higherKinds
+
 class Builder(id: String) { self =>
   import scala.collection.mutable
   import Builder.{ VarDef, Namer }
@@ -128,23 +130,26 @@ class Builder(id: String) { self =>
     def size(id: String, desc: String = ""): Var[Type.Size[id.type]] =
       given(id, desc).size
 
+    def size: Namer.Size =
+      new Namer.Size(self)
+
     def given(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Given), opt(desc))
 
-    def given: Namer =
-      new Namer(self, Some(Observation.Given))
+    def given: Namer.VarDef =
+      new Namer.VarDef(self, Some(Observation.Given))
 
     def observed(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Observed), opt(desc))
 
-    def observed: Namer =
-      new Namer(self, Some(Observation.Observed))
+    def observed: Namer.VarDef =
+      new Namer.VarDef(self, Some(Observation.Observed))
 
     def hidden(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Hidden), opt(desc))
 
-    def hidden: Namer =
-      new Namer(self, Some(Observation.Hidden))
+    def hidden: Namer.VarDef =
+      new Namer.VarDef(self, Some(Observation.Hidden))
 
     def computed(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Hidden), opt(desc)) // TODO: inherit observation from its dependencies
@@ -208,113 +213,230 @@ object Builder {
     }
   }
 
-  class Namer(builder: Builder, observation: Option[Observation]) {
+  abstract class Namer[A[_ <: String]] {
     import Namer.{ literal => lit }
 
-    private[this] def vdef[ID <: String](id: ID): VarDef[ID] =
-      new VarDef(id, builder, observation, None)
+    protected def vdef[ID <: String](id: ID): A[ID]
 
-    private[this] def vdef[ID <: String](id: ID, desc: String): VarDef[ID] =
-      new VarDef(id, builder, observation, Some(desc))
+    protected def vdef[ID <: String](id: ID, desc: String): A[ID]
 
-    def Alpha = vdef(lit.Alpha)
-    def Alpha(desc: String) = vdef(lit.Alpha)
-    def alpha = vdef(lit.alpha)
-    def alpha(desc: String) = vdef(lit.alpha)
-    def Beta = vdef(lit.Beta)
-    def Beta(desc: String) = vdef(lit.Beta)
-    def beta = vdef(lit.beta)
-    def beta(desc: String) = vdef(lit.beta)
-    def Gamma = vdef(lit.Gamma)
-    def Gamma(desc: String) = vdef(lit.Gamma)
-    def gamma = vdef(lit.gamma)
-    def gamma(desc: String) = vdef(lit.gamma)
-    def Delta = vdef(lit.Delta)
-    def Delta(desc: String) = vdef(lit.Delta)
-    def delta = vdef(lit.delta)
-    def delta(desc: String) = vdef(lit.delta)
-    def Epsilon = vdef(lit.Epsilon)
-    def Epsilon(desc: String) = vdef(lit.Epsilon)
-    def epsilon = vdef(lit.epsilon)
-    def epsilon(desc: String) = vdef(lit.epsilon)
-    def Zeta = vdef(lit.Zeta)
-    def Zeta(desc: String) = vdef(lit.Zeta)
-    def zeta = vdef(lit.zeta)
-    def zeta(desc: String) = vdef(lit.zeta)
-    def Eta = vdef(lit.Eta)
-    def Eta(desc: String) = vdef(lit.Eta)
-    def eta = vdef(lit.eta)
-    def eta(desc: String) = vdef(lit.eta)
-    def Theta = vdef(lit.Theta)
-    def Theta(desc: String) = vdef(lit.Theta)
-    def theta = vdef(lit.theta)
-    def theta(desc: String) = vdef(lit.theta)
-    def Iota = vdef(lit.Iota)
-    def Iota(desc: String) = vdef(lit.Iota)
-    def iota = vdef(lit.iota)
-    def iota(desc: String) = vdef(lit.iota)
-    def Kappa = vdef(lit.Kappa)
-    def Kappa(desc: String) = vdef(lit.Kappa)
-    def kappa = vdef(lit.kappa)
-    def kappa(desc: String) = vdef(lit.kappa)
-    def Lambda = vdef(lit.Lambda)
-    def Lambda(desc: String) = vdef(lit.Lambda)
-    def lambda = vdef(lit.lambda)
-    def lambda(desc: String) = vdef(lit.lambda)
-    def Mu = vdef(lit.Mu)
-    def Mu(desc: String) = vdef(lit.Mu)
-    def mu = vdef(lit.mu)
-    def mu(desc: String) = vdef(lit.mu)
-    def Nu = vdef(lit.Nu)
-    def Nu(desc: String) = vdef(lit.Nu)
-    def nu = vdef(lit.nu)
-    def nu(desc: String) = vdef(lit.nu)
-    def Xi = vdef(lit.Xi)
-    def Xi(desc: String) = vdef(lit.Xi)
-    def xi = vdef(lit.xi)
-    def xi(desc: String) = vdef(lit.xi)
-    def Omicron = vdef(lit.Omicron)
-    def Omicron(desc: String) = vdef(lit.Omicron)
-    def omicron = vdef(lit.omicron)
-    def omicron(desc: String) = vdef(lit.omicron)
-    def Pi = vdef(lit.Pi)
-    def Pi(desc: String) = vdef(lit.Pi)
-    def pi = vdef(lit.pi)
-    def pi(desc: String) = vdef(lit.pi)
-    def Rho = vdef(lit.Rho)
-    def Rho(desc: String) = vdef(lit.Rho)
-    def rho = vdef(lit.rho)
-    def rho(desc: String) = vdef(lit.rho)
-    def Sigma = vdef(lit.Sigma)
-    def Sigma(desc: String) = vdef(lit.Sigma)
-    def sigma = vdef(lit.sigma)
-    def sigma(desc: String) = vdef(lit.sigma)
-    def Tau = vdef(lit.Tau)
-    def Tau(desc: String) = vdef(lit.Tau)
-    def tau = vdef(lit.tau)
-    def tau(desc: String) = vdef(lit.tau)
-    def Upsilon = vdef(lit.Upsilon)
-    def Upsilon(desc: String) = vdef(lit.Upsilon)
-    def upsilon = vdef(lit.upsilon)
-    def upsilon(desc: String) = vdef(lit.upsilon)
-    def Phi = vdef(lit.Phi)
-    def Phi(desc: String) = vdef(lit.Phi)
-    def phi = vdef(lit.phi)
-    def phi(desc: String) = vdef(lit.phi)
-    def Chi = vdef(lit.Chi)
-    def Chi(desc: String) = vdef(lit.Chi)
-    def chi = vdef(lit.chi)
-    def chi(desc: String) = vdef(lit.chi)
-    def Psi = vdef(lit.Psi)
-    def Psi(desc: String) = vdef(lit.Psi)
-    def psi = vdef(lit.psi)
-    def psi(desc: String) = vdef(lit.psi)
-    def Omega = vdef(lit.Omega)
-    def Omega(desc: String) = vdef(lit.Omega)
-    def omega = vdef(lit.omega)
-    def omega(desc: String) = vdef(lit.omega)
+    def Alpha: A[lit.Alpha.type] = vdef(lit.Alpha)
+    def Alpha(desc: String): A[lit.Alpha.type] = vdef(lit.Alpha)
+    def alpha: A[lit.alpha.type] = vdef(lit.alpha)
+    def alpha(desc: String): A[lit.alpha.type] = vdef(lit.alpha)
+    def Beta: A[lit.Beta.type] = vdef(lit.Beta)
+    def Beta(desc: String): A[lit.Beta.type] = vdef(lit.Beta)
+    def beta: A[lit.beta.type] = vdef(lit.beta)
+    def beta(desc: String): A[lit.beta.type] = vdef(lit.beta)
+    def Gamma: A[lit.Gamma.type] = vdef(lit.Gamma)
+    def Gamma(desc: String): A[lit.Gamma.type] = vdef(lit.Gamma)
+    def gamma: A[lit.gamma.type] = vdef(lit.gamma)
+    def gamma(desc: String): A[lit.gamma.type] = vdef(lit.gamma)
+    def Delta: A[lit.Delta.type] = vdef(lit.Delta)
+    def Delta(desc: String): A[lit.Delta.type] = vdef(lit.Delta)
+    def delta: A[lit.delta.type] = vdef(lit.delta)
+    def delta(desc: String): A[lit.delta.type] = vdef(lit.delta)
+    def Epsilon: A[lit.Epsilon.type] = vdef(lit.Epsilon)
+    def Epsilon(desc: String): A[lit.Epsilon.type] = vdef(lit.Epsilon)
+    def epsilon: A[lit.epsilon.type] = vdef(lit.epsilon)
+    def epsilon(desc: String): A[lit.epsilon.type] = vdef(lit.epsilon)
+    def Zeta: A[lit.Zeta.type] = vdef(lit.Zeta)
+    def Zeta(desc: String): A[lit.Zeta.type] = vdef(lit.Zeta)
+    def zeta: A[lit.zeta.type] = vdef(lit.zeta)
+    def zeta(desc: String): A[lit.zeta.type] = vdef(lit.zeta)
+    def Eta: A[lit.Eta.type] = vdef(lit.Eta)
+    def Eta(desc: String): A[lit.Eta.type] = vdef(lit.Eta)
+    def eta: A[lit.eta.type] = vdef(lit.eta)
+    def eta(desc: String): A[lit.eta.type] = vdef(lit.eta)
+    def Theta: A[lit.Theta.type] = vdef(lit.Theta)
+    def Theta(desc: String): A[lit.Theta.type] = vdef(lit.Theta)
+    def theta: A[lit.theta.type] = vdef(lit.theta)
+    def theta(desc: String): A[lit.theta.type] = vdef(lit.theta)
+    def Iota: A[lit.Iota.type] = vdef(lit.Iota)
+    def Iota(desc: String): A[lit.Iota.type] = vdef(lit.Iota)
+    def iota: A[lit.iota.type] = vdef(lit.iota)
+    def iota(desc: String): A[lit.iota.type] = vdef(lit.iota)
+    def Kappa: A[lit.Kappa.type] = vdef(lit.Kappa)
+    def Kappa(desc: String): A[lit.Kappa.type] = vdef(lit.Kappa)
+    def kappa: A[lit.kappa.type] = vdef(lit.kappa)
+    def kappa(desc: String): A[lit.kappa.type] = vdef(lit.kappa)
+    def Lambda: A[lit.Lambda.type] = vdef(lit.Lambda)
+    def Lambda(desc: String): A[lit.Lambda.type] = vdef(lit.Lambda)
+    def lambda: A[lit.lambda.type] = vdef(lit.lambda)
+    def lambda(desc: String): A[lit.lambda.type] = vdef(lit.lambda)
+    def Mu: A[lit.Mu.type] = vdef(lit.Mu)
+    def Mu(desc: String): A[lit.Mu.type] = vdef(lit.Mu)
+    def mu: A[lit.mu.type] = vdef(lit.mu)
+    def mu(desc: String): A[lit.mu.type] = vdef(lit.mu)
+    def Nu: A[lit.Nu.type] = vdef(lit.Nu)
+    def Nu(desc: String): A[lit.Nu.type] = vdef(lit.Nu)
+    def nu: A[lit.nu.type] = vdef(lit.nu)
+    def nu(desc: String): A[lit.nu.type] = vdef(lit.nu)
+    def Xi: A[lit.Xi.type] = vdef(lit.Xi)
+    def Xi(desc: String): A[lit.Xi.type] = vdef(lit.Xi)
+    def xi: A[lit.xi.type] = vdef(lit.xi)
+    def xi(desc: String): A[lit.xi.type] = vdef(lit.xi)
+    def Omicron: A[lit.Omicron.type] = vdef(lit.Omicron)
+    def Omicron(desc: String): A[lit.Omicron.type] = vdef(lit.Omicron)
+    def omicron: A[lit.omicron.type] = vdef(lit.omicron)
+    def omicron(desc: String): A[lit.omicron.type] = vdef(lit.omicron)
+    def Pi: A[lit.Pi.type] = vdef(lit.Pi)
+    def Pi(desc: String): A[lit.Pi.type] = vdef(lit.Pi)
+    def pi: A[lit.pi.type] = vdef(lit.pi)
+    def pi(desc: String): A[lit.pi.type] = vdef(lit.pi)
+    def Rho: A[lit.Rho.type] = vdef(lit.Rho)
+    def Rho(desc: String): A[lit.Rho.type] = vdef(lit.Rho)
+    def rho: A[lit.rho.type] = vdef(lit.rho)
+    def rho(desc: String): A[lit.rho.type] = vdef(lit.rho)
+    def Sigma: A[lit.Sigma.type] = vdef(lit.Sigma)
+    def Sigma(desc: String): A[lit.Sigma.type] = vdef(lit.Sigma)
+    def sigma: A[lit.sigma.type] = vdef(lit.sigma)
+    def sigma(desc: String): A[lit.sigma.type] = vdef(lit.sigma)
+    def Tau: A[lit.Tau.type] = vdef(lit.Tau)
+    def Tau(desc: String): A[lit.Tau.type] = vdef(lit.Tau)
+    def tau: A[lit.tau.type] = vdef(lit.tau)
+    def tau(desc: String): A[lit.tau.type] = vdef(lit.tau)
+    def Upsilon: A[lit.Upsilon.type] = vdef(lit.Upsilon)
+    def Upsilon(desc: String): A[lit.Upsilon.type] = vdef(lit.Upsilon)
+    def upsilon: A[lit.upsilon.type] = vdef(lit.upsilon)
+    def upsilon(desc: String): A[lit.upsilon.type] = vdef(lit.upsilon)
+    def Phi: A[lit.Phi.type] = vdef(lit.Phi)
+    def Phi(desc: String): A[lit.Phi.type] = vdef(lit.Phi)
+    def phi: A[lit.phi.type] = vdef(lit.phi)
+    def phi(desc: String): A[lit.phi.type] = vdef(lit.phi)
+    def Chi: A[lit.Chi.type] = vdef(lit.Chi)
+    def Chi(desc: String): A[lit.Chi.type] = vdef(lit.Chi)
+    def chi: A[lit.chi.type] = vdef(lit.chi)
+    def chi(desc: String): A[lit.chi.type] = vdef(lit.chi)
+    def Psi: A[lit.Psi.type] = vdef(lit.Psi)
+    def Psi(desc: String): A[lit.Psi.type] = vdef(lit.Psi)
+    def psi: A[lit.psi.type] = vdef(lit.psi)
+    def psi(desc: String): A[lit.psi.type] = vdef(lit.psi)
+    def Omega: A[lit.Omega.type] = vdef(lit.Omega)
+    def Omega(desc: String): A[lit.Omega.type] = vdef(lit.Omega)
+    def omega: A[lit.omega.type] = vdef(lit.omega)
+    def omega(desc: String): A[lit.omega.type] = vdef(lit.omega)
+
+    def a: A[lit.a.type] = vdef(lit.a)
+    def a(desc: String): A[lit.a.type] = vdef(lit.a, desc)
+    def A: A[lit.A.type] = vdef(lit.A)
+    def A(desc: String): A[lit.A.type] = vdef(lit.A, desc)
+    def b: A[lit.b.type] = vdef(lit.b)
+    def b(desc: String): A[lit.b.type] = vdef(lit.b, desc)
+    def B: A[lit.B.type] = vdef(lit.B)
+    def B(desc: String): A[lit.B.type] = vdef(lit.B, desc)
+    def c: A[lit.c.type] = vdef(lit.c)
+    def c(desc: String): A[lit.c.type] = vdef(lit.c, desc)
+    def C: A[lit.C.type] = vdef(lit.C)
+    def C(desc: String): A[lit.C.type] = vdef(lit.C, desc)
+    def d: A[lit.d.type] = vdef(lit.d)
+    def d(desc: String): A[lit.d.type] = vdef(lit.d, desc)
+    def D: A[lit.D.type] = vdef(lit.D)
+    def D(desc: String): A[lit.D.type] = vdef(lit.D, desc)
+    def e: A[lit.e.type] = vdef(lit.e)
+    def e(desc: String): A[lit.e.type] = vdef(lit.e, desc)
+    def E: A[lit.E.type] = vdef(lit.E)
+    def E(desc: String): A[lit.E.type] = vdef(lit.E, desc)
+    def f: A[lit.f.type] = vdef(lit.f)
+    def f(desc: String): A[lit.f.type] = vdef(lit.f, desc)
+    def F: A[lit.F.type] = vdef(lit.F)
+    def F(desc: String): A[lit.F.type] = vdef(lit.F, desc)
+    def g: A[lit.g.type] = vdef(lit.g)
+    def g(desc: String): A[lit.g.type] = vdef(lit.g, desc)
+    def G: A[lit.G.type] = vdef(lit.G)
+    def G(desc: String): A[lit.G.type] = vdef(lit.G, desc)
+    def h: A[lit.h.type] = vdef(lit.h)
+    def h(desc: String): A[lit.h.type] = vdef(lit.h, desc)
+    def H: A[lit.H.type] = vdef(lit.H)
+    def H(desc: String): A[lit.H.type] = vdef(lit.H, desc)
+    def i: A[lit.i.type] = vdef(lit.i)
+    def i(desc: String): A[lit.i.type] = vdef(lit.i, desc)
+    def I: A[lit.I.type] = vdef(lit.I)
+    def I(desc: String): A[lit.I.type] = vdef(lit.I, desc)
+    def j: A[lit.j.type] = vdef(lit.j)
+    def j(desc: String): A[lit.j.type] = vdef(lit.j, desc)
+    def J: A[lit.J.type] = vdef(lit.J)
+    def J(desc: String): A[lit.J.type] = vdef(lit.J, desc)
+    def k: A[lit.k.type] = vdef(lit.k)
+    def k(desc: String): A[lit.k.type] = vdef(lit.k, desc)
+    def K: A[lit.K.type] = vdef(lit.K)
+    def K(desc: String): A[lit.K.type] = vdef(lit.K, desc)
+    def l: A[lit.l.type] = vdef(lit.l)
+    def l(desc: String): A[lit.l.type] = vdef(lit.l, desc)
+    def L: A[lit.L.type] = vdef(lit.L)
+    def L(desc: String): A[lit.L.type] = vdef(lit.L, desc)
+    def m: A[lit.m.type] = vdef(lit.m)
+    def m(desc: String): A[lit.m.type] = vdef(lit.m, desc)
+    def M: A[lit.M.type] = vdef(lit.M)
+    def M(desc: String): A[lit.M.type] = vdef(lit.M, desc)
+    def n: A[lit.n.type] = vdef(lit.n)
+    def n(desc: String): A[lit.n.type] = vdef(lit.n, desc)
+    def N: A[lit.N.type] = vdef(lit.N)
+    def N(desc: String): A[lit.N.type] = vdef(lit.N, desc)
+    def o: A[lit.o.type] = vdef(lit.o)
+    def o(desc: String): A[lit.o.type] = vdef(lit.o, desc)
+    def O: A[lit.O.type] = vdef(lit.O)
+    def O(desc: String): A[lit.O.type] = vdef(lit.O, desc)
+    def p: A[lit.p.type] = vdef(lit.p)
+    def p(desc: String): A[lit.p.type] = vdef(lit.p, desc)
+    def P: A[lit.P.type] = vdef(lit.P)
+    def P(desc: String): A[lit.P.type] = vdef(lit.P, desc)
+    def q: A[lit.q.type] = vdef(lit.q)
+    def q(desc: String): A[lit.q.type] = vdef(lit.q, desc)
+    def Q: A[lit.Q.type] = vdef(lit.Q)
+    def Q(desc: String): A[lit.Q.type] = vdef(lit.Q, desc)
+    def r: A[lit.r.type] = vdef(lit.r)
+    def r(desc: String): A[lit.r.type] = vdef(lit.r, desc)
+    def R: A[lit.R.type] = vdef(lit.R)
+    def R(desc: String): A[lit.R.type] = vdef(lit.R, desc)
+    def s: A[lit.s.type] = vdef(lit.s)
+    def s(desc: String): A[lit.s.type] = vdef(lit.s, desc)
+    def S: A[lit.S.type] = vdef(lit.S)
+    def S(desc: String): A[lit.S.type] = vdef(lit.S, desc)
+    def t: A[lit.t.type] = vdef(lit.t)
+    def t(desc: String): A[lit.t.type] = vdef(lit.t, desc)
+    def T: A[lit.T.type] = vdef(lit.T)
+    def T(desc: String): A[lit.T.type] = vdef(lit.T, desc)
+    def u: A[lit.u.type] = vdef(lit.u)
+    def u(desc: String): A[lit.u.type] = vdef(lit.u, desc)
+    def U: A[lit.U.type] = vdef(lit.U)
+    def U(desc: String): A[lit.U.type] = vdef(lit.U, desc)
+    def v: A[lit.v.type] = vdef(lit.v)
+    def v(desc: String): A[lit.v.type] = vdef(lit.v, desc)
+    def V: A[lit.V.type] = vdef(lit.V)
+    def V(desc: String): A[lit.V.type] = vdef(lit.V, desc)
+    def w: A[lit.w.type] = vdef(lit.w)
+    def w(desc: String): A[lit.w.type] = vdef(lit.w, desc)
+    def W: A[lit.W.type] = vdef(lit.W)
+    def W(desc: String): A[lit.W.type] = vdef(lit.W, desc)
+    def x: A[lit.x.type] = vdef(lit.x)
+    def x(desc: String): A[lit.x.type] = vdef(lit.x, desc)
+    def X: A[lit.X.type] = vdef(lit.X)
+    def X(desc: String): A[lit.X.type] = vdef(lit.X, desc)
+    def y: A[lit.y.type] = vdef(lit.y)
+    def y(desc: String): A[lit.y.type] = vdef(lit.y, desc)
+    def Y: A[lit.Y.type] = vdef(lit.Y)
+    def Y(desc: String): A[lit.Y.type] = vdef(lit.Y, desc)
+    def z: A[lit.z.type] = vdef(lit.z)
+    def z(desc: String): A[lit.z.type] = vdef(lit.z, desc)
+    def Z: A[lit.Z.type] = vdef(lit.Z)
+    def Z(desc: String): A[lit.Z.type] = vdef(lit.Z, desc)
   }
   object Namer {
+    class VarDef(builder: Builder, observation: Option[Observation]) extends Namer[Builder.VarDef] {
+      override protected def vdef[ID <: String](id: ID): Builder.VarDef[ID] =
+        new Builder.VarDef(id, builder, observation, None)
+
+      override protected def vdef[ID <: String](id: ID, desc: String): Builder.VarDef[ID] =
+        new Builder.VarDef(id, builder, observation, Some(desc))
+    }
+    class Size(builder: Builder) extends Namer[({ type L[A <: String] = Var[Type.Size[A]] })#L] {
+      override protected def vdef[ID <: String](id: ID): Var[Type.Size[ID]] =
+        new Builder.VarDef(id, builder, Some(Observation.Given), None).size
+
+      override protected def vdef[ID <: String](id: ID, desc: String): Var[Type.Size[ID]] =
+        new Builder.VarDef(id, builder, Some(Observation.Given), Some(desc)).size
+    }
     object literal {
       final val Alpha = "Α"
       final val alpha = "α"
@@ -364,6 +486,58 @@ object Builder {
       final val psi = "ψ"
       final val Omega = "Ω"
       final val omega = "ω"
+      final val a = "a"
+      final val A = "A"
+      final val b = "b"
+      final val B = "B"
+      final val c = "c"
+      final val C = "C"
+      final val d = "d"
+      final val D = "D"
+      final val e = "e"
+      final val E = "E"
+      final val f = "f"
+      final val F = "F"
+      final val g = "g"
+      final val G = "G"
+      final val h = "h"
+      final val H = "H"
+      final val i = "i"
+      final val I = "I"
+      final val j = "j"
+      final val J = "J"
+      final val k = "k"
+      final val K = "K"
+      final val l = "l"
+      final val L = "L"
+      final val m = "m"
+      final val M = "M"
+      final val n = "n"
+      final val N = "N"
+      final val o = "o"
+      final val O = "O"
+      final val p = "p"
+      final val P = "P"
+      final val q = "q"
+      final val Q = "Q"
+      final val r = "r"
+      final val R = "R"
+      final val s = "s"
+      final val S = "S"
+      final val t = "t"
+      final val T = "T"
+      final val u = "u"
+      final val U = "U"
+      final val v = "v"
+      final val V = "V"
+      final val w = "w"
+      final val W = "W"
+      final val x = "x"
+      final val X = "X"
+      final val y = "y"
+      final val Y = "Y"
+      final val z = "z"
+      final val Z = "Z"
     }
   }
 
