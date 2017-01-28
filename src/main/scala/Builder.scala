@@ -2,7 +2,7 @@ package com.todesking.platebuilder
 
 class Builder(id: String) { self =>
   import scala.collection.mutable
-  import Builder.VarDef
+  import Builder.{ VarDef, Namer }
 
   private[this] var vars: Map[VarID, Var[_ <: Type]] = Map()
   private[this] var varOrder: Seq[VarID] = Seq()
@@ -131,11 +131,20 @@ class Builder(id: String) { self =>
     def given(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Given), opt(desc))
 
+    def given: Namer =
+      new Namer(self, Some(Observation.Given))
+
     def observed(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Observed), opt(desc))
 
+    def observed: Namer =
+      new Namer(self, Some(Observation.Observed))
+
     def hidden(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Hidden), opt(desc))
+
+    def hidden: Namer =
+      new Namer(self, Some(Observation.Hidden))
 
     def computed(id: String, desc: String = ""): VarDef[id.type] =
       new VarDef[id.type](id, self, Some(Observation.Hidden), opt(desc)) // TODO: inherit observation from its dependencies
@@ -196,6 +205,165 @@ object Builder {
           override def apply(self: Incomplete[D1, Vec[I, E]], i: Incomplete[D2, Size[I]]) =
             new Incomplete(self.id, self.varType.elementType, self.observation)
         }
+    }
+  }
+
+  class Namer(builder: Builder, observation: Option[Observation]) {
+    import Namer.{ literal => lit }
+
+    private[this] def vdef[ID <: String](id: ID): VarDef[ID] =
+      new VarDef(id, builder, observation, None)
+
+    private[this] def vdef[ID <: String](id: ID, desc: String): VarDef[ID] =
+      new VarDef(id, builder, observation, Some(desc))
+
+    def Alpha = vdef(lit.Alpha)
+    def Alpha(desc: String) = vdef(lit.Alpha)
+    def alpha = vdef(lit.alpha)
+    def alpha(desc: String) = vdef(lit.alpha)
+    def Beta = vdef(lit.Beta)
+    def Beta(desc: String) = vdef(lit.Beta)
+    def beta = vdef(lit.beta)
+    def beta(desc: String) = vdef(lit.beta)
+    def Gamma = vdef(lit.Gamma)
+    def Gamma(desc: String) = vdef(lit.Gamma)
+    def gamma = vdef(lit.gamma)
+    def gamma(desc: String) = vdef(lit.gamma)
+    def Delta = vdef(lit.Delta)
+    def Delta(desc: String) = vdef(lit.Delta)
+    def delta = vdef(lit.delta)
+    def delta(desc: String) = vdef(lit.delta)
+    def Epsilon = vdef(lit.Epsilon)
+    def Epsilon(desc: String) = vdef(lit.Epsilon)
+    def epsilon = vdef(lit.epsilon)
+    def epsilon(desc: String) = vdef(lit.epsilon)
+    def Zeta = vdef(lit.Zeta)
+    def Zeta(desc: String) = vdef(lit.Zeta)
+    def zeta = vdef(lit.zeta)
+    def zeta(desc: String) = vdef(lit.zeta)
+    def Eta = vdef(lit.Eta)
+    def Eta(desc: String) = vdef(lit.Eta)
+    def eta = vdef(lit.eta)
+    def eta(desc: String) = vdef(lit.eta)
+    def Theta = vdef(lit.Theta)
+    def Theta(desc: String) = vdef(lit.Theta)
+    def theta = vdef(lit.theta)
+    def theta(desc: String) = vdef(lit.theta)
+    def Iota = vdef(lit.Iota)
+    def Iota(desc: String) = vdef(lit.Iota)
+    def iota = vdef(lit.iota)
+    def iota(desc: String) = vdef(lit.iota)
+    def Kappa = vdef(lit.Kappa)
+    def Kappa(desc: String) = vdef(lit.Kappa)
+    def kappa = vdef(lit.kappa)
+    def kappa(desc: String) = vdef(lit.kappa)
+    def Lambda = vdef(lit.Lambda)
+    def Lambda(desc: String) = vdef(lit.Lambda)
+    def lambda = vdef(lit.lambda)
+    def lambda(desc: String) = vdef(lit.lambda)
+    def Mu = vdef(lit.Mu)
+    def Mu(desc: String) = vdef(lit.Mu)
+    def mu = vdef(lit.mu)
+    def mu(desc: String) = vdef(lit.mu)
+    def Nu = vdef(lit.Nu)
+    def Nu(desc: String) = vdef(lit.Nu)
+    def nu = vdef(lit.nu)
+    def nu(desc: String) = vdef(lit.nu)
+    def Xi = vdef(lit.Xi)
+    def Xi(desc: String) = vdef(lit.Xi)
+    def xi = vdef(lit.xi)
+    def xi(desc: String) = vdef(lit.xi)
+    def Omicron = vdef(lit.Omicron)
+    def Omicron(desc: String) = vdef(lit.Omicron)
+    def omicron = vdef(lit.omicron)
+    def omicron(desc: String) = vdef(lit.omicron)
+    def Pi = vdef(lit.Pi)
+    def Pi(desc: String) = vdef(lit.Pi)
+    def pi = vdef(lit.pi)
+    def pi(desc: String) = vdef(lit.pi)
+    def Rho = vdef(lit.Rho)
+    def Rho(desc: String) = vdef(lit.Rho)
+    def rho = vdef(lit.rho)
+    def rho(desc: String) = vdef(lit.rho)
+    def Sigma = vdef(lit.Sigma)
+    def Sigma(desc: String) = vdef(lit.Sigma)
+    def sigma = vdef(lit.sigma)
+    def sigma(desc: String) = vdef(lit.sigma)
+    def Tau = vdef(lit.Tau)
+    def Tau(desc: String) = vdef(lit.Tau)
+    def tau = vdef(lit.tau)
+    def tau(desc: String) = vdef(lit.tau)
+    def Upsilon = vdef(lit.Upsilon)
+    def Upsilon(desc: String) = vdef(lit.Upsilon)
+    def upsilon = vdef(lit.upsilon)
+    def upsilon(desc: String) = vdef(lit.upsilon)
+    def Phi = vdef(lit.Phi)
+    def Phi(desc: String) = vdef(lit.Phi)
+    def phi = vdef(lit.phi)
+    def phi(desc: String) = vdef(lit.phi)
+    def Chi = vdef(lit.Chi)
+    def Chi(desc: String) = vdef(lit.Chi)
+    def chi = vdef(lit.chi)
+    def chi(desc: String) = vdef(lit.chi)
+    def Psi = vdef(lit.Psi)
+    def Psi(desc: String) = vdef(lit.Psi)
+    def psi = vdef(lit.psi)
+    def psi(desc: String) = vdef(lit.psi)
+    def Omega = vdef(lit.Omega)
+    def Omega(desc: String) = vdef(lit.Omega)
+    def omega = vdef(lit.omega)
+    def omega(desc: String) = vdef(lit.omega)
+  }
+  object Namer {
+    object literal {
+      final val Alpha = "Α"
+      final val alpha = "α"
+      final val Beta = "Β"
+      final val beta = "β"
+      final val Gamma = "Γ"
+      final val gamma = "γ"
+      final val Delta = "Δ"
+      final val delta = "δ"
+      final val Epsilon = "Ε"
+      final val epsilon = "ε"
+      final val Zeta = "Ζ"
+      final val zeta = "ζ"
+      final val Eta = "Η"
+      final val eta = "η"
+      final val Theta = "Θ"
+      final val theta = "θ"
+      final val Iota = "Ι"
+      final val iota = "ι"
+      final val Kappa = "Κ"
+      final val kappa = "κ"
+      final val Lambda = "Λ"
+      final val lambda = "λ"
+      final val Mu = "Μ"
+      final val mu = "μ"
+      final val Nu = "Ν"
+      final val nu = "ν"
+      final val Xi = "Ξ"
+      final val xi = "ξ"
+      final val Omicron = "Ο"
+      final val omicron = "ο"
+      final val Pi = "Π"
+      final val pi = "π"
+      final val Rho = "Ρ"
+      final val rho = "ρ"
+      final val Sigma = "Σ"
+      final val sigma = "σ"
+      final val Tau = "Τ"
+      final val tau = "τ"
+      final val Upsilon = "Υ"
+      final val upsilon = "υ"
+      final val Phi = "Φ"
+      final val phi = "φ"
+      final val Chi = "Χ"
+      final val chi = "χ"
+      final val Psi = "Ψ"
+      final val psi = "ψ"
+      final val Omega = "Ω"
+      final val omega = "ω"
     }
   }
 

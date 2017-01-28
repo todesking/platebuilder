@@ -11,10 +11,10 @@ object Main {
     val N = size("N", "Number of words for each documents") * D
 
     // hyperparameters
-    val beta = given("β").realVec(V)
+    val beta = given.beta.realVec(V)
 
     // variables
-    val phi = hidden("φ").realVec(V)
+    val phi = hidden.phi.realVec(V)
     val w = observed("w").category(V) * (D, N)
 
     phi ~ dirichlet(beta)
@@ -34,12 +34,12 @@ object Main {
     val N = size("N", "Number of words for each documents") * D
 
     // hyperparameters
-    val alpha = given("α").realVec(K)
-    val beta = given("β").realVec(V)
+    val alpha = given.alpha.realVec(K)
+    val beta = given.beta.realVec(V)
 
     // variables
-    val phi = hidden("φ").realVec(V) * K
-    val theta = hidden("θ").realVec(K)
+    val phi = hidden.phi.realVec(V) * K
+    val theta = hidden.theta.realVec(K)
     val z = hidden("z", "Hidden topic for each document").category(K) * D
     val w = observed("w").category(V) * (D, N)
 
@@ -65,12 +65,12 @@ object Main {
     val N = size("N", "Number of words for each documents") * D
 
     // hyperparameters
-    val alpha = given("α").realVec(K)
-    val beta = given("β").realVec(V)
+    val alpha = given.alpha.realVec(K)
+    val beta = given.beta.realVec(V)
 
     // variables
-    val phi = hidden("φ").realVec(V) * K
-    val theta = hidden("θ").realVec(K) * D
+    val phi = hidden.phi.realVec(V) * K
+    val theta = hidden.theta.realVec(K) * D
     val z = hidden("z", "Hidden topic for each word").category(K) * (D, N)
     val w = observed("w").category(V) * (D, N)
 
@@ -98,16 +98,16 @@ object Main {
     val K_L = size("K_L", "Num of topics assigned for each document and label") * (D, Kd)
 
     // hyperparameters
-    val alpha = given("α").R
-    val beta = given("β").realVec(V)
+    val alpha = given.alpha.R
+    val beta = given.beta.realVec(V)
 
     val alphaL = computed("α_L").realVec(Kd(D)) * D
     val alphaT = computed("α_T").realVec(K) * (D, Kd)
 
     // variables
-    val phi = hidden("φ").realVec(V) * K
+    val phi = hidden.phi.realVec(V) * K
     val theta = hidden("θ", "Topic distribution").realVec(K) * (D, Kd)
-    val Lambda = observed("Λ", "Assigned labels").binaryVec(L) * D
+    val Lambda = observed.Lambda("Assigned labels").binaryVec(L) * D
     val psi = hidden("ψ").realVec(Kd(D)) * D
     val z = hidden("z").category(K) * (D, N)
     val w = observed("w").category(V) * (D, N)
@@ -152,7 +152,7 @@ object Main {
     val x = observed("x").realVec(D) * N
     val w = hidden("w").realVec(D)
     val b = hidden("b").R
-    val mu = hidden("μ").R * N
+    val mu = hidden.mu.R * N
     val y = observed("y").R * N
 
     for (d <- D) {
@@ -181,13 +181,13 @@ object Main {
 
     val unused = given("unused").realVec(D) * D
 
-    val alpha = given("α").realVec(K)
-    val beta = given("β").realVec(V)
+    val alpha = given.alpha.realVec(K)
+    val beta = given.beta.realVec(V)
 
-    val phi = hidden("φ").realVec(V) * K
+    val phi = hidden.phi.realVec(V) * K
     val eta = hidden("η").realVec(K) * D
-    val zeta = hidden("ζ").category(K) * K * D
-    val theta = hidden("θ").realVec(K) * (D, C)
+    val zeta = hidden.zeta.category(K) * K * D
+    val theta = hidden.theta.realVec(K) * (D, C)
     val z = hidden("z").category(K) * (D, C, S, P, N)
     val w = observed("w").category(V) * (D, C, S, P, N)
     val y = observed("y").category(K) * (D, C, S)
