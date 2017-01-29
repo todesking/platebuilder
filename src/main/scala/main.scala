@@ -4,8 +4,9 @@ import scala.language.implicitConversions
 import scala.language.higherKinds
 
 object Main {
-  val Unigram = Model.define("Unigram") { implicit ctx =>
-    import ctx.dsl._
+  object Unigram extends PlateBuilder {
+    import builder.dsl._
+
     val V = size.V("Number of vocabularies")
     val D = size.D("Number of documents")
     val N = size.N("Number of words for each documents") * D
@@ -244,7 +245,7 @@ object Main {
     }
   }
 
-  val models = Seq(Unigram, MixtureOfUnigrams, LDA, PLDA, BLR, Sample, Legend)
+  val models = Seq(Unigram.model, MixtureOfUnigrams, LDA, PLDA, BLR, Sample, Legend)
 
   def main(args: Array[String]): Unit = {
     println(Model.toDot(models))
