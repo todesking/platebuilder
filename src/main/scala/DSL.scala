@@ -1,24 +1,13 @@
 package com.todesking.platebuilder
 
 import scala.language.higherKinds
+import scala.language.implicitConversions
 
-class DSL {
+class DSL extends AnyRef with Distributions {
   import DSL.{ Namer, VarDef }
   private[this] def opt(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
-  implicit class GeneratorSyntax(sc: StringContext) {
-    private[this] def filterVars(args: Seq[Any]): Seq[Var[_]] =
-      args.collect { case v: Var[_] => v }
-
-    private[this] def deps(v: Var[_]): Set[VarID] =
-      v.deps + v.id
-
-    def stochastic[A <: Type](args: Any*): Generator[A] =
-      new Generator.Expr(true, filterVars(args).flatMap(deps).toSet, sc.parts, args)
-
-    def deterministic[A <: Type](args: Any*): Generator[A] =
-      new Generator.Expr(false, filterVars(args).flatMap(deps).toSet, sc.parts, args)
-  }
+  implicit def generatorSyntax(sc: StringContext): DSL.GeneratorSyntax = new DSL.GeneratorSyntax(sc)
 
   def const(n: Double)(implicit b: Builder): Var[Type.Real] = {
     val v = new Var.Constant(VarID(s"constant_R_${n}"), n, Type.Real)
@@ -53,20 +42,25 @@ class DSL {
   def computed(id: String, desc: String = "")(implicit b: Builder): VarDef[id.type] =
     new VarDef[id.type](id, b, Some(Observation.Hidden), opt(desc)) // TODO: inherit observation from its dependencies
 
-  def dirichlet[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator[Type.Vec[I, Type.Real]] =
-    stochastic"Dirichlet($param)"
-
-  def multinominal[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator[Type.Category[I]] =
-    stochastic"Mult($param)"
-
-  def normal(mu: Var[Type.Real], s2: Var[Type.Real]): Generator[Type.Real] =
-    stochastic"Normal($mu, $s2)"
-
   def mapping[A <: String, B <: String](a: Var[Type.Size[A]], b: Var[Type.Size[B]]): Builder.Mapping[A, B] =
     new Builder.Mapping(a.varType, b.varType)
 }
 
 object DSL {
+  implicit class GeneratorSyntax(sc: StringContext) {
+    private[this] def filterVars(args: Seq[Any]): Seq[Var[_]] =
+      args.collect { case v: Var[_] => v }
+
+    private[this] def deps(v: Var[_]): Set[VarID] =
+      v.deps + v.id
+
+    def stochastic[A <: Type](args: Any*): Generator[A] =
+      new Generator.Expr(true, filterVars(args).flatMap(deps).toSet, sc.parts, args)
+
+    def deterministic[A <: Type](args: Any*): Generator[A] =
+      new Generator.Expr(false, filterVars(args).flatMap(deps).toSet, sc.parts, args)
+  }
+
   abstract class Namer[A[_ <: String]] {
     import Namer.{ literal => lit }
 
