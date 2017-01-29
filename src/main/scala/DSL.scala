@@ -2,7 +2,7 @@ package com.todesking.platebuilder
 
 import scala.language.higherKinds
 
-class DSL(val self: Builder) {
+class DSL {
   import DSL.{ Namer, VarDef }
   private[this] def opt(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
@@ -20,38 +20,38 @@ class DSL(val self: Builder) {
       new Generator.Expr(false, filterVars(args).flatMap(deps).toSet, sc.parts, args)
   }
 
-  def const(n: Double): Var[Type.Real] = {
+  def const(n: Double)(implicit b: Builder): Var[Type.Real] = {
     val v = new Var.Constant(VarID(s"constant_R_${n}"), n, Type.Real)
-    self.newConst(v, n.toString)
+    b.newConst(v, n.toString)
     v
   }
 
-  def size(id: String, desc: String = ""): Var[Type.Size[id.type]] =
+  def size(id: String, desc: String = "")(implicit b: Builder): Var[Type.Size[id.type]] =
     given(id, desc).size
 
-  def size: Namer.Size =
-    new Namer.Size(self)
+  def size(implicit b: Builder): Namer.Size =
+    new Namer.Size(b)
 
-  def given(id: String, desc: String = ""): VarDef[id.type] =
-    new VarDef[id.type](id, self, Some(Observation.Given), opt(desc))
+  def given(id: String, desc: String = "")(implicit b: Builder): VarDef[id.type] =
+    new VarDef[id.type](id, b, Some(Observation.Given), opt(desc))
 
-  def given: Namer.VarDef =
-    new Namer.VarDef(self, Some(Observation.Given))
+  def given(implicit b: Builder): Namer.VarDef =
+    new Namer.VarDef(b, Some(Observation.Given))
 
-  def observed(id: String, desc: String = ""): VarDef[id.type] =
-    new VarDef[id.type](id, self, Some(Observation.Observed), opt(desc))
+  def observed(id: String, desc: String = "")(implicit b: Builder): VarDef[id.type] =
+    new VarDef[id.type](id, b, Some(Observation.Observed), opt(desc))
 
-  def observed: Namer.VarDef =
-    new Namer.VarDef(self, Some(Observation.Observed))
+  def observed(implicit b: Builder): Namer.VarDef =
+    new Namer.VarDef(b, Some(Observation.Observed))
 
-  def hidden(id: String, desc: String = ""): VarDef[id.type] =
-    new VarDef[id.type](id, self, Some(Observation.Hidden), opt(desc))
+  def hidden(id: String, desc: String = "")(implicit b: Builder): VarDef[id.type] =
+    new VarDef[id.type](id, b, Some(Observation.Hidden), opt(desc))
 
-  def hidden: Namer.VarDef =
-    new Namer.VarDef(self, Some(Observation.Hidden))
+  def hidden(implicit b: Builder): Namer.VarDef =
+    new Namer.VarDef(b, Some(Observation.Hidden))
 
-  def computed(id: String, desc: String = ""): VarDef[id.type] =
-    new VarDef[id.type](id, self, Some(Observation.Hidden), opt(desc)) // TODO: inherit observation from its dependencies
+  def computed(id: String, desc: String = "")(implicit b: Builder): VarDef[id.type] =
+    new VarDef[id.type](id, b, Some(Observation.Hidden), opt(desc)) // TODO: inherit observation from its dependencies
 
   def dirichlet[I <: String](param: Var[Type.Vec[I, Type.Real]]): Generator[Type.Vec[I, Type.Real]] =
     stochastic"Dirichlet($param)"

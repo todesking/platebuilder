@@ -101,7 +101,7 @@ class Builder(id: String) { self =>
     generators += (v.id -> g)
   }
 
-  val dsl = new DSL(self)
+  val dsl = new DSL
 }
 object Builder {
   class Mapping[A <: String, B <: String](t1: Type.Size[A], t2: Type.Size[B]) extends Function1[Var[Type.Category[A]], Var[Type.Category[B]]] {
