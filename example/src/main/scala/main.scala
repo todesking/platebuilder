@@ -22,7 +22,7 @@ object Main {
 
     for (d <- D) {
       for (n <- N(d)) {
-        w(d, n) ~ multinominal(phi)
+        w(d, n) ~ categorical(phi)
       }
     }
   }
@@ -51,9 +51,9 @@ object Main {
     theta ~ dirichlet(alpha)
 
     for (d <- D) {
-      z(d) ~ multinominal(theta)
+      z(d) ~ categorical(theta)
       for (n <- N(d)) {
-        w(d, n) ~ multinominal(phi(z(d)))
+        w(d, n) ~ categorical(phi(z(d)))
       }
     }
   }
@@ -82,8 +82,8 @@ object Main {
     for (d <- D) {
       theta(d) ~ dirichlet(alpha)
       for (n <- N(d)) {
-        z(d, n) ~ multinominal(theta(d))
-        w(d, n) ~ multinominal(phi(z(d, n)))
+        z(d, n) ~ categorical(theta(d))
+        w(d, n) ~ categorical(phi(z(d, n)))
       }
     }
   }
@@ -133,9 +133,9 @@ object Main {
       psi(d) ~ dirichlet(alphaL(d))
 
       for (n <- N(d)) {
-        l(d, n) ~ multinominal(psi(d))
-        z(d, n) ~ multinominal(theta(d, l(d, n)))
-        w(d, n) ~ multinominal(phi(z(d, n)))
+        l(d, n) ~ categorical(psi(d))
+        z(d, n) ~ categorical(theta(d, l(d, n)))
+        w(d, n) ~ categorical(phi(z(d, n)))
       }
     }
   }
@@ -210,7 +210,7 @@ object Main {
     for (d <- D) {
       eta(d) ~ dirichlet(alpha)
       for (k <- K) {
-        zeta(d, k) ~ multinominal(eta(d))
+        zeta(d, k) ~ categorical(eta(d))
       }
       for (c <- C(d)) {
         theta(d, c) ~ dirichlet(eta(d))
@@ -218,8 +218,8 @@ object Main {
           y(d, c, s) ~ deterministic"f(${z(d, c, s)})"
           for (p <- P(d, c, s)) {
             for (n <- N(d, c, s, p)) {
-              z(d, c, s, p, n) ~ multinominal(theta(d, c))
-              w(d, c, s, p, n) ~ multinominal(phi(zeta(d, z(d, c, s, p, n))))
+              z(d, c, s, p, n) ~ categorical(theta(d, c))
+              w(d, c, s, p, n) ~ categorical(phi(zeta(d, z(d, c, s, p, n))))
             }
           }
         }
