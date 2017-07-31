@@ -133,7 +133,7 @@ class Model(
       }
     }
     def renderEdge(from: VarID, to: VarID, stochastic: Boolean): String =
-      Dot.edge(id(from), id(to), arrowhead = if (stochastic) "" else "box")
+      Dot.edge(id(from), id(to))
     def renderChild(c: Grouped.Child): String =
       Dot.subGraph(s"cluster_${c.index.str}", label = c.index.str, labeljust = "r", labelloc = "b") {
         (c.vars.map(renderVar) ++ c.children.map(renderChild)).mkString("\n")
