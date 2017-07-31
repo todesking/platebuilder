@@ -1,14 +1,14 @@
 package com.todesking.platebuilder
 
 class Model(
-    id: String,
-    varOrder: Seq[VarID],
+    val id: String,
+    val varOrder: Seq[VarID],
     _vars: Map[VarID, Var[_ <: Type]],
-    indices: Map[VarID, Seq[IndexID]],
+    val indices: Map[VarID, Seq[IndexID]],
     _inEdges: Map[VarID, Set[VarID]],
-    generators: Map[VarID, Generator[_ <: Type]],
-    observations: Map[VarID, Observation],
-    descriptions: Map[VarID, String]
+    val generators: Map[VarID, Generator[_ <: Type]],
+    val observations: Map[VarID, Observation],
+    val descriptions: Map[VarID, String]
 ) {
   import Model._
 
@@ -46,137 +46,8 @@ class Model(
     merge(vars.toSeq.map { v => toGrouped(index(v), v) })
   }
 
-  def toDot(subgraph: Boolean = false): String = {
-    def repr(v: VarID): String = s"${this.repr(v)} ∈ ${tpe(v)}"
-    def tpe(v: VarID): String = {
-      val t = varType(v)
-      val base =
-        t.bareType match {
-          case Type.Real => "R"
-          case Type.Binary => "{0, 1}"
-          case Type.Category(s) => s"{1..${s.indexID.str}}"
-          case Type.Size(id) => "N"
-        }
-      val dim =
-        if (t.dimension.nonEmpty) s" ^ ${t.dimension.map(_.str).mkString("×")}"
-        else ""
-      base + dim
-    }
-    def id(v: VarID): String = s"${this.id}_${v.str}"
-    val transpose = true
-    def renderExpr(v: VarID, parts: Seq[String], args: Seq[Any]): String = {
-      def render(a: Any): String = a match {
-        case Var.Simple(id, t) =>
-          id.str
-        case Var.Constant(id, v, _) =>
-          v.toString
-        case a @ Var.Access(vec, i) =>
-          val path = a.path.map(_.id.asIndex)
-          val vPath = index(v)
-          val pos = vPath.zipWithIndex.lastIndexWhere {
-            case (vid, i) =>
-              i < path.size && path(i) == vid
-          }
-          val visibleIndices =
-            if (pos == -1) a.path.map(_.id.str)
-            else a.path.drop(pos + 1).map(_.id.str)
-          if (visibleIndices.isEmpty) a.id.str
-          else s"${a.id.str}(${visibleIndices.mkString(", ")})"
-      }
-      var s = parts(0)
-      for (i <- 1 until parts.size) {
-        s += render(args(i - 1))
-        s += parts(i)
-      }
-      s
-    }
-    def isVisible(v: VarID): Boolean =
-      !generator(v).isInstanceOf[Generator.Const[_]]
-
-    def renderVar(v: VarID): String = {
-      val isSize = varType(v).isInstanceOf[Type.Size[_]]
-      val (stochastic, definition) = generator(v).map {
-        case Generator.Const(value) => (false, Seq(value))
-        case Generator.Expr(stochastic, deps, parts, args) =>
-          (stochastic, Seq(renderExpr(v, parts, args)))
-        case Generator.Given() =>
-          (false, Seq())
-      } getOrElse (false, Seq())
-      observation(v) match {
-        case _ if !isVisible(v) =>
-          ""
-        case Observation.Hidden =>
-          Dot.record(
-            id(v),
-            transpose = transpose,
-            style = "",
-            m = true,
-            label = repr(v) +: definition
-          )
-        case Observation.Observed =>
-          Dot.record(
-            id(v),
-            transpose = transpose,
-            style = "filled",
-            m = true,
-            label = repr(v) +: definition
-          )
-        case Observation.Given if !isSize =>
-          Dot.record(
-            id(v),
-            transpose = transpose,
-            style = "",
-            label = repr(v) +: definition
-          )
-        case Observation.Given =>
-          ""
-      }
-    }
-    def renderEdge(from: VarID, to: VarID, stochastic: Boolean): String =
-      Dot.edge(id(from), id(to))
-    def renderChild(c: Grouped.Child): String =
-      Dot.subGraph(s"cluster_${c.index.str}", label = c.index.str, labeljust = "r", labelloc = "b") {
-        (c.vars.map(renderVar) ++ c.children.map(renderChild)).mkString("\n")
-      }
-    def visibleInEdges(v: VarID): Set[VarID] =
-      inEdges(v).flatMap { v2 =>
-        if (!isVisible(v2)) Set.empty[VarID]
-        else if (index(v).contains(v2.asIndex)) Set.empty[VarID]
-        else if (varType(v2).isInstanceOf[Type.Size[_]]) visibleInEdges(v2)
-        else Set(v2)
-      }
-    val descs =
-      vars.flatMap { v =>
-        descriptions.get(v).map { d =>
-          s"${v.str}: ${d}"
-        }
-      }
-    val descNode =
-      if (descs.isEmpty) Seq()
-      else Seq(Dot.node(
-        id = s"${this.id}_NOTE",
-        shape = "note",
-        label = descs.mkString("", "\\l", "\\l")
-      ))
-    val content =
-      Seq(
-        grouped.vars.map(renderVar),
-        grouped.children.map(renderChild),
-        vars.flatMap { v =>
-          val stochastic = generator(v) match {
-            case Some(Generator.Expr(s, _, _, _)) => s
-            case _ => false
-          }
-          visibleInEdges(v).map { v2 => renderEdge(v2, v, stochastic) }
-        },
-        descNode
-      ).flatten.mkString("\n")
-    if (subgraph) {
-      Dot.subGraph(s"cluster_${this.id}", label = this.id)(content)
-    } else {
-      Dot.digraph(this.id)("""rankdir="TB";charset="UTF-8";""" + content)
-    }
-  }
+  def toDot(subgraph: Boolean): String =
+    new DotRenderer(subgraph = subgraph).render(this)
 }
 object Model {
   def define(id: String)(f: Builder => Unit): Model = {
