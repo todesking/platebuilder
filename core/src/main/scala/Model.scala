@@ -22,7 +22,7 @@ class Model(
   def index(id: VarID): Seq[IndexID] = indices.get(id) getOrElse Seq()
   def desc(id: VarID): Option[String] = descriptions.get(id)
   def inEdges(id: VarID): Set[VarID] = _inEdges.get(id) getOrElse Set()
-  def generator(id: VarID): Generator[_] = generators(id)
+  def generator(id: VarID): Option[Generator[_]] = generators.get(id)
 
   lazy val grouped: Grouped.Root = {
     def toGrouped(i: Seq[IndexID], v: VarID): Grouped.Root =
@@ -95,13 +95,13 @@ class Model(
 
     def renderVar(v: VarID): String = {
       val isSize = varType(v).isInstanceOf[Type.Size[_]]
-      val (stochastic, definition) = generator(v) match {
+      val (stochastic, definition) = generator(v).map {
         case Generator.Const(value) => (false, Seq(value))
         case Generator.Expr(stochastic, deps, parts, args) =>
           (stochastic, Seq(renderExpr(v, parts, args)))
         case Generator.Given() =>
           (false, Seq())
-      }
+      } getOrElse (false, Seq())
       observation(v) match {
         case _ if !isVisible(v) =>
           ""
@@ -164,7 +164,7 @@ class Model(
         grouped.children.map(renderChild),
         vars.flatMap { v =>
           val stochastic = generator(v) match {
-            case Generator.Expr(s, _, _, _) => s
+            case Some(Generator.Expr(s, _, _, _)) => s
             case _ => false
           }
           visibleInEdges(v).map { v2 => renderEdge(v2, v, stochastic) }

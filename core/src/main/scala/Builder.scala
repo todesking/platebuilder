@@ -15,10 +15,6 @@ class Builder(id: String) { self =>
   private[this] var _currentPath: Seq[IndexID] = Seq()
 
   def build(): Model = {
-    val missingGenerators = vars.keys.filterNot { id => generators.contains(id) }
-    if (missingGenerators.nonEmpty) {
-      throw new IllegalStateException(s"Generator undefined: ${missingGenerators.map(_.str).mkString(", ")}")
-    }
     val undefinedVars = (
       indices.keySet ++ indices.values.flatten.map(id => VarID(id.str)).toSet ++ inEdges.keySet ++ inEdges.values.flatten.toSet ++ generators.keySet ++ descs.keySet
     ).filterNot { id => vars.contains(id) }
