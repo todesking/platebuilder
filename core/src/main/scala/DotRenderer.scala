@@ -2,7 +2,8 @@ package com.todesking.platebuilder
 
 class DotRenderer(
     subgraph: Boolean = false,
-    transpose: Boolean = true
+    transpose: Boolean = true,
+    html: Boolean = true
 ) {
   def render(model: Model): String = {
     val descs =
@@ -44,12 +45,12 @@ class DotRenderer(
     val base =
       t.bareType match {
         case Type.Real => "R"
-        case Type.Binary => "{0, 1}"
-        case Type.Category(s) => s"{1..${s.indexID.str}}"
+        case Type.Binary => """\{0, 1\}"""
+        case Type.Category(s) => s"""\\{1..${s.indexID.str}\\}"""
         case Type.Size(id) => "N"
       }
     val dim =
-      if (t.dimension.nonEmpty) s" ^ ${t.dimension.map(_.str).mkString("×")}"
+      if (t.dimension.nonEmpty) s"^{${t.dimension.map(_.str).mkString("×")}}"
       else ""
     base + dim
   }
@@ -83,6 +84,20 @@ class DotRenderer(
   private[this] def isVisible(model: Model, v: VarID): Boolean =
     !model.generator(v).isInstanceOf[Generator.Const[_]]
 
+  private[this] def renderMarkup(s: String): String = {
+    def render(m: Markup): String = m match {
+      case Markup.Plain(s) => s.replaceAll(" ", "&nbsp;") // TODO: escape html?
+      case Markup.Sup(elm) =>
+        s"""<SUP><FONT POINT-SIZE="10">${render(elm)}</FONT></SUP>"""
+      case Markup.Sub(elm) =>
+        s"""<SUB><FONT POINT-SIZE="10">${render(elm)}</FONT></SUB>"""
+      case Markup.Group(elms) =>
+        elms.map(render).mkString("")
+    }
+    val m = Markup.parse(s)
+    render(m)
+  }
+
   private[this] def renderVar(model: Model, v: VarID): String = {
     val isSize = model.varType(v).isInstanceOf[Type.Size[_]]
     val (stochastic, definition) = model.generator(v).map {
@@ -92,6 +107,10 @@ class DotRenderer(
       case Generator.Given() =>
         (false, Seq())
     } getOrElse (false, Seq())
+    def labelOf(v: VarID): Seq[String] = {
+      val l = repr(model, v) +: definition
+      if (html) l.map(renderMarkup) else l
+    }
     model.observation(v) match {
       case _ if !isVisible(model, v) =>
         ""
@@ -101,7 +120,8 @@ class DotRenderer(
           transpose = transpose,
           style = "",
           m = true,
-          label = repr(model, v) +: definition
+          label = labelOf(v),
+          html = html
         )
       case Observation.Observed =>
         Dot.record(
@@ -109,14 +129,16 @@ class DotRenderer(
           transpose = transpose,
           style = "filled",
           m = true,
-          label = repr(model, v) +: definition
+          label = labelOf(v),
+          html = html
         )
       case Observation.Given if !isSize =>
         Dot.record(
           id(model, v),
           transpose = transpose,
           style = "",
-          label = repr(model, v) +: definition
+          label = labelOf(v),
+          html = html
         )
       case Observation.Given =>
         ""

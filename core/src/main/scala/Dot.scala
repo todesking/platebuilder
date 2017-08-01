@@ -1,8 +1,8 @@
 package com.todesking.platebuilder
 
 object Dot {
-  private[this] def attr(name: String, value: String): String =
-    if (value.isEmpty) "" else s"""$name="$value""""
+  private[this] def attr(name: String, value: String, html: Boolean = false): String =
+    if (value.isEmpty) "" else if (html) s"""$name=<$value>""" else s"""$name="$value""""
   private[this] def attrL(name: String, value: String): String =
     if (value.isEmpty) "" else s"""$name="$value";"""
 
@@ -29,12 +29,12 @@ object Dot {
       case c => c.toString
     }
 
-  def node(id: String, shape: String = "ellipse", style: String = "", label: String = ""): String =
-    s"""${idEscape(id)}[shape=${shape} ${attr("label", escape(label))} ${attr("style", style)}];"""
+  def node(id: String, shape: String = "ellipse", style: String = "", label: String = "", html: Boolean = false): String =
+    s"""${idEscape(id)}[shape=${shape} ${attr("label", escape(label), html)} ${attr("style", style)}];"""
 
-  def record(id: String, m: Boolean = false, style: String = "", label: Seq[String] = Seq(), transpose: Boolean = false): String = {
+  def record(id: String, m: Boolean = false, style: String = "", label: Seq[String] = Seq(), transpose: Boolean = false, html: Boolean = false): String = {
     val l = label.map(escapeRecord).mkString("|")
-    node(id, shape = if (m) "Mrecord" else "record", style = style, label = if (transpose) s"{$l}" else l)
+    node(id, shape = if (m) "Mrecord" else "record", style = style, label = if (transpose) s"{$l}" else l, html = html)
   }
 
   def edge(from: String, to: String, style: String = "", arrowtail: String = "", arrowhead: String = ""): String =
