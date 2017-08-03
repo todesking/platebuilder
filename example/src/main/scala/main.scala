@@ -45,7 +45,7 @@ object Main {
 
     val K = size.K
 
-    val unused = given("unused").realVec(D) * D
+    val unused = given("unused").mat(V, K, Type.Real) * D
 
     val alpha = given.alpha.realVec(K)
     val beta = given.beta.realVec(V)
@@ -110,7 +110,24 @@ object Main {
     }
   }
 
-  val models = Seq(BLR, Sample, Legend)
+  val LR = Model.define("Logistic Regression") { implicit builder =>
+    import builder.dsl._
+    val N = size("N")
+    val d = size("d")
+    val x = observed.x.realVec(d) * N
+    val y = observed.y.binary * N
+    val lambda = hidden.lambda.R * N
+    val beta_0 = hidden("β_0").R
+    val beta = hidden.beta.realVec(d)
+
+    for (i <- N) {
+      lambda(i) ~ deterministic"logistic($beta_0 + $beta ${x(i)})"
+      y(i) ~ stochastic"Binomial(${lambda(i)})"
+    }
+
+  }
+
+  val models = Seq(BLR, Sample, LR, Legend)
 
   def main(args: Array[String]): Unit = {
     println(Model.toDot(models))
