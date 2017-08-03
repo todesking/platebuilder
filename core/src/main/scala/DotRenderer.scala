@@ -39,7 +39,11 @@ class DotRenderer(
     }
   }
 
-  private[this] def repr(model: Model, v: VarID): String = s"${model.repr(v)} ∈ ${tpe(model, v)}"
+  private[this] def repr(model: Model, v: VarID): String = {
+    val bold = !model.varType(v).isScalar
+    val varName = model.repr(v)
+    s"${if (bold) s"""\\bf{$varName}""" else varName} ∈ ${tpe(model, v)}"
+  }
   private[this] def tpe(model: Model, v: VarID): String = {
     val t = model.varType(v)
     val base =
@@ -58,7 +62,8 @@ class DotRenderer(
   private[this] def renderExpr(model: Model, v: VarID, parts: Seq[String], args: Seq[Any]): String = {
     def render(a: Any): String = a match {
       case Var.Simple(id, t) =>
-        id.str
+        if (t.isScalar) id.str
+        else s"\\bf{${id.str}}"
       case Var.Constant(id, v, _) =>
         v.toString
       case a @ Var.Access(vec, i) =>
@@ -71,8 +76,9 @@ class DotRenderer(
         val visibleIndices =
           if (pos == -1) a.path.map(_.id.str)
           else a.path.drop(pos + 1).map(_.id.str)
-        if (visibleIndices.isEmpty) a.id.str
-        else s"${a.id.str}(${visibleIndices.mkString(", ")})"
+        val name = s"\\bf{${a.id.str}}"
+        if (visibleIndices.isEmpty) name
+        else s"${name}(${visibleIndices.mkString(", ")})"
     }
     var s = parts(0)
     for (i <- 1 until parts.size) {
@@ -90,30 +96,41 @@ class DotRenderer(
   private[this] def renderMarkup(s: String): String = {
     val fontSizeMultiplier = 0.75
     def table(s: String*): String =
-      s"""<TABLE ALIGN="left" BORDER="0" CELLBORDER="0" CELLPADDING="0" CELLSPACING="0">${s.mkString("")}</TABLE>"""
-    def tr(s: String): String =
-      s"""<TR>$s</TR>"""
-    def td(s: String): String =
-      s"""<TD>$s</TD>"""
-    def renderUD(u: Option[Markup], d: Option[Markup], prefix: String, fontSize: Double): String = {
+      tag(
+        "TABLE",
+        "ALIGN" -> "left",
+        "BORDER" -> "0",
+        "CELLBORDER" -> "0",
+        "CELLPADDING" -> "0",
+        "CELLSPACING" -> "0"
+      )(s.mkString(""))
+    def tr(s: String): String = tag("TR")(s)
+    def td(s: String): String = tag("TD")(s)
+    def renderUD(u: Option[Markup], d: Option[Markup], prefix: String, fontSize: Double, handlePlain: String => String): String = {
       val size = fontSize * fontSizeMultiplier
       table(
-        tr(td(u.map { m => render(m, prefix, size) } getOrElse "&nbsp;")),
-        tr(td(d.map { m => render(m, prefix, size) } getOrElse "&nbsp;"))
+        tr(td(u.map { m => render(m, prefix, size, handlePlain) } getOrElse "&nbsp;")),
+        tr(td(d.map { m => render(m, prefix, size, handlePlain) } getOrElse "&nbsp;"))
       )
     }
     def font(size: Double)(s: String): String =
-      f"""<FONT POINT-SIZE="$size%.2f">$s</FONT>"""
-    def render(m: Markup, prefix: String, fontSize: Double): String = m match {
-      case Markup.Plain(s) => font(size = fontSize)(prefix + s.replaceAll(" ", "&nbsp;")) // TODO: escape html
+      tag("FONT", "POINT-SIZE" -> f"$size%.2f")(s)
+    def tag(name: String, attrs: (String, String)*)(content: String): String = {
+      val a = if (attrs.isEmpty) "" else " " + attrs.map { case (k, v) => s"""$k="$v"""" }.mkString(" ")
+      s"""<$name$a>$content</$name>"""
+    }
+    def render(m: Markup, prefix: String, fontSize: Double, handlePlain: String => String): String = m match {
+      case Markup.Plain(s) => font(size = fontSize)(prefix + handlePlain(s.replaceAll(" ", "&nbsp;"))) // TODO: escape html
       case Markup.UD(u, d) =>
-        renderUD(u, d, "", fontSize)
+        renderUD(u, d, "", fontSize, handlePlain)
       case Markup.Group(elms) =>
-        table(tr((td(render(elms.head, prefix, fontSize)) +: elms.tail.map { e => td(render(e, "", fontSize)) }).mkString("")))
+        table(tr((td(render(elms.head, prefix, fontSize, handlePlain)) +: elms.tail.map { e => td(render(e, "", fontSize, handlePlain)) }).mkString("")))
+      case Markup.Bold(elm) =>
+        render(elm, prefix, fontSize, s => tag("B")(s))
     }
     val defaultFontSize = 14.0
     val m = Markup.parse(s)
-    table(tr(td(render(m, "", defaultFontSize))))
+    table(tr(td(render(m, "", defaultFontSize, identity))))
   }
 
   private[this] def renderVar(model: Model, v: VarID): String = {

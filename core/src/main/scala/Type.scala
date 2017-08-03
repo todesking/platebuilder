@@ -3,6 +3,7 @@ package com.todesking.platebuilder
 sealed abstract class Type {
   def bareType: Type.Scalar
   def dimension: Seq[IndexID]
+  def isScalar: Boolean = dimension.isEmpty
 }
 object Type {
   sealed abstract class Scalar extends Type {

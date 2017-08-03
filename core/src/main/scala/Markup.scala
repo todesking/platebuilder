@@ -8,6 +8,7 @@ object Markup {
   case class Plain(text: String) extends Markup
   case class UD(upper: Option[Markup], downer: Option[Markup]) extends Markup
   case class Group(elements: Seq[Markup]) extends Markup
+  case class Bold(element: Markup) extends Markup
 
   def parse(s: String): Group = Parser.parse(s)
 
@@ -17,10 +18,14 @@ object Markup {
     override def skipWhitespace = false
 
     def markup: Parser[Seq[Markup]] = rep(single)
-    def single: Parser[Markup] = plain | sup | sub | group
+    def single: Parser[Markup] = plain | sup | sub | group | command
+    def command: Parser[Markup] = "\\" ~> """[a-zA-Z0-9_]+""".r ~ group ^^ {
+      case "bf" ~ grp => Bold(grp)
+      case unk => throw new RuntimeException(s"Unknown command: \\$unk")
+    }
     def group: Parser[Group] = "{" ~> (rep(single) ^^ Group.apply) <~ "}"
     def plain: Parser[Plain] = rep1(plainChar) ^^ { chars => Plain(chars.mkString("")) }
-    def plainChar: Parser[Char] = ("""\\.""".r ^^ { s => s.charAt(1) }) | ("""[^^_{}]""".r ^^ { s => s.charAt(0) })
+    def plainChar: Parser[Char] = ("""\\[{}]""".r ^^ { s => s.charAt(1) }) | ("""[^^_{}\\]""".r ^^ { s => s.charAt(0) })
     def sup: Parser[Markup] = sup0 ~ sub0.? ^^ { case u ~ d => UD(Some(u), d) }
     def sub: Parser[Markup] = sub0 ~ sup0.? ^^ { case d ~ u => UD(u, Some(d)) }
     def sup0: Parser[Markup] = "^" ~> (plainChar ^^ { c => Plain(c.toString) } | group)
