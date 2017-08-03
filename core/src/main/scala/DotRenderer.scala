@@ -74,8 +74,8 @@ class DotRenderer(
             i < path.size && path(i) == vid
         }
         val visibleIndices =
-          if (pos == -1) a.path.map(_.id.str)
-          else a.path.drop(pos + 1).map(_.id.str)
+          if (pos == -1) a.path.map(render)
+          else a.path.drop(pos + 1).map(render)
         val name = if (a.varType.isScalar) a.id.str else s"\\bf{${a.id.str}}"
         if (visibleIndices.isEmpty) name
         else s"${name}_{${visibleIndices.mkString(", ")}}"
