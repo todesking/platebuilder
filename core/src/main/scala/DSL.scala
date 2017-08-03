@@ -410,6 +410,9 @@ object DSL {
     def vec[I <: String, II <: HList, T <: Type](dim: Incomplete[II, Type.Size[I]], tpe: T): Incomplete[II, Type.Vec[I, T]] =
       new Incomplete(id, Type.Vec(dim.id.asIndex, tpe), observation)
 
+    def mat[I1 <: String, I2 <: String, T <: Type](dim1: Var[Type.Size[I1]], dim2: Var[Type.Size[I2]], tpe: T): Var[Type.Mat[I1, I2, T]] =
+      register(new Var.Simple(id, Type.Mat(dim1.id.asIndex, dim2.id.asIndex, tpe)))
+
     def realVec[I <: String, T <: Type](dim: Var[Type.Size[I]]): Var[Type.Vec[I, Type.Real]] =
       vec(dim, Type.Real)
 

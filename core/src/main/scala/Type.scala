@@ -21,5 +21,9 @@ object Type {
     override def bareType = elm.bareType
     override def dimension = Seq(indexID) ++ elm.dimension
   }
+  case class Mat[I1 <: String, I2 <: String, A <: Type](indexID1: IndexID, indexID2: IndexID, elm: A) extends Type {
+    override def bareType = elm.bareType
+    override def dimension = Seq(indexID1, indexID2) ++ elm.dimension
+  }
 }
 
