@@ -82,7 +82,10 @@ class DotRenderer(
     s
   }
   private[this] def isVisible(model: Model, v: VarID): Boolean =
-    !model.generator(v).isInstanceOf[Generator.Const[_]]
+    model.generator(v) match {
+      case Some(Generator.Const(_)) => false
+      case _ => true
+    }
 
   private[this] def renderMarkup(s: String): String = {
     val fontSizeMultiplier = 0.75
