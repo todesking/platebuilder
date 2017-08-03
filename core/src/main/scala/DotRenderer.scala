@@ -48,10 +48,10 @@ class DotRenderer(
     val t = model.varType(v)
     val base =
       t.bareType match {
-        case Type.Real => "R"
+        case Type.Real => "ℝ"
         case Type.Binary => """\{0, 1\}"""
         case Type.Category(s) => s"""\\{1..${s.indexID.str}\\}"""
-        case Type.Size(id) => "N"
+        case Type.Size(id) => "ℕ"
       }
     val dim =
       if (t.dimension.nonEmpty) s"^{${t.dimension.map(_.str).mkString("×")}}"
