@@ -1,7 +1,7 @@
-package com.todesking.platebuilder
-
 import scala.language.implicitConversions
 import scala.language.higherKinds
+
+import com.todesking.platebuilder.{ PlateBuilder, Model, Type }
 
 object Main {
 
@@ -127,7 +127,7 @@ object Main {
 
   }
 
-  val models = Seq(BLR, Sample, LR, Legend)
+  val models = Seq(BLR, Sample, LR, Legend, LDAFamily.LDA)
 
   def main(args: Array[String]): Unit = {
     println(Model.toDot(models))
