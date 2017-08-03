@@ -6,14 +6,13 @@ sealed abstract class Markup {
 }
 object Markup {
   case class Plain(text: String) extends Markup
-  case class Sup(markup: Markup) extends Markup
-  case class Sub(markup: Markup) extends Markup
+  case class UD(upper: Option[Markup], downer: Option[Markup]) extends Markup
   case class Group(elements: Seq[Markup]) extends Markup
 
-  def parse(s: String): Markup = Parser.parse(s)
+  def parse(s: String): Group = Parser.parse(s)
 
   object Parser extends RegexParsers {
-    def parse(s: String): Markup = Group(parse(markup, s).get)
+    def parse(s: String): Group = Group(parse(markup, s).get)
 
     override def skipWhitespace = false
 
@@ -22,7 +21,9 @@ object Markup {
     def group: Parser[Group] = "{" ~> (rep(single) ^^ Group.apply) <~ "}"
     def plain: Parser[Plain] = rep1(plainChar) ^^ { chars => Plain(chars.mkString("")) }
     def plainChar: Parser[Char] = ("""\\.""".r ^^ { s => s.charAt(1) }) | ("""[^^_{}]""".r ^^ { s => s.charAt(0) })
-    def sup: Parser[Sup] = "^" ~> (plainChar ^^ { c => Plain(c.toString) } | group) ^^ Sup.apply
-    def sub: Parser[Sub] = "_" ~> (plainChar ^^ { c => Plain(c.toString) } | group) ^^ Sub.apply
+    def sup: Parser[Markup] = sup0 ~ sub0.? ^^ { case u ~ d => UD(Some(u), d) }
+    def sub: Parser[Markup] = sub0 ~ sup0.? ^^ { case d ~ u => UD(u, Some(d)) }
+    def sup0: Parser[Markup] = "^" ~> (plainChar ^^ { c => Plain(c.toString) } | group)
+    def sub0: Parser[Markup] = "_" ~> (plainChar ^^ { c => Plain(c.toString) } | group)
   }
 }

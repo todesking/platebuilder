@@ -85,17 +85,32 @@ class DotRenderer(
     !model.generator(v).isInstanceOf[Generator.Const[_]]
 
   private[this] def renderMarkup(s: String): String = {
-    def render(m: Markup): String = m match {
-      case Markup.Plain(s) => s.replaceAll(" ", "&nbsp;") // TODO: escape html?
-      case Markup.Sup(elm) =>
-        s"""<SUP><FONT POINT-SIZE="10">${render(elm)}</FONT></SUP>"""
-      case Markup.Sub(elm) =>
-        s"""<SUB><FONT POINT-SIZE="10">${render(elm)}</FONT></SUB>"""
-      case Markup.Group(elms) =>
-        elms.map(render).mkString("")
+    val fontSizeMultiplier = 0.75
+    def table(s: String*): String =
+      s"""<TABLE ALIGN="left" BORDER="0" CELLBORDER="0" CELLPADDING="0" CELLSPACING="0">${s.mkString("")}</TABLE>"""
+    def tr(s: String): String =
+      s"""<TR>$s</TR>"""
+    def td(s: String): String =
+      s"""<TD>$s</TD>"""
+    def renderUD(u: Option[Markup], d: Option[Markup], prefix: String, fontSize: Double): String = {
+      val size = fontSize * fontSizeMultiplier
+      table(
+        tr(td(u.map { m => render(m, prefix, size) } getOrElse "&nbsp;")),
+        tr(td(d.map { m => render(m, prefix, size) } getOrElse "&nbsp;"))
+      )
     }
+    def font(size: Double)(s: String): String =
+      f"""<FONT POINT-SIZE="$size%.2f">$s</FONT>"""
+    def render(m: Markup, prefix: String, fontSize: Double): String = m match {
+      case Markup.Plain(s) => font(size = fontSize)(prefix + s.replaceAll(" ", "&nbsp;")) // TODO: escape html
+      case Markup.UD(u, d) =>
+        renderUD(u, d, "", fontSize)
+      case Markup.Group(elms) =>
+        table(tr((td(render(elms.head, prefix, fontSize)) +: elms.tail.map { e => td(render(e, "", fontSize)) }).mkString("")))
+    }
+    val defaultFontSize = 14.0
     val m = Markup.parse(s)
-    render(m)
+    table(tr(td(render(m, "", defaultFontSize))))
   }
 
   private[this] def renderVar(model: Model, v: VarID): String = {
