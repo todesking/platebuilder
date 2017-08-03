@@ -78,7 +78,7 @@ class DotRenderer(
           else a.path.drop(pos + 1).map(_.id.str)
         val name = if (a.varType.isScalar) a.id.str else s"\\bf{${a.id.str}}"
         if (visibleIndices.isEmpty) name
-        else s"${name}(${visibleIndices.mkString(", ")})"
+        else s"${name}_{${visibleIndices.mkString(", ")}}"
     }
     var s = parts(0)
     for (i <- 1 until parts.size) {
