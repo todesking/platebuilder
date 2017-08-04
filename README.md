@@ -2,7 +2,7 @@
 
 Typesafe Scala DSL to build graphical model.
 
-![Graphical models of LDA and firends](img/ldas.svg)
+![Graphical models of LDA and firends](https://rawgit.com/todesking/platebuilder/master/img/ldas.svg)
 
 ```scala
 // example/src/main/scala/Demo.scala
