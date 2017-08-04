@@ -1,11 +1,5 @@
-# Platebuilder: Typesafe plate notation (graphical model) builder
+import com.todesking.platebuilder.{ PlateBuilder, Model }
 
-Typesafe Scala DSL to build graphical model.
-
-![Graphical models of LDA and firends](img/ldas.svg)
-
-```scala
-// example/src/main/scala/Demo.scala
 object Demo {
   object Unigram extends PlateBuilder {
     import builder.dsl._
@@ -97,11 +91,3 @@ object Demo {
     println(Model.toDot(basic))
   }
 }
-```
-
-## Demo
-
-```shellsession
-$ sbt --error 'set showSuccess := false' 'example/runMain Demo' > demo.dot
-$ dot -Tpng demo.dot > demo.png
-```
